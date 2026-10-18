@@ -62,7 +62,9 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float dist=length(f-center);
   float radius=max(mix(.038,.17,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort);
   float aa=scale/min(resolution.x,resolution.y);
-  if(dist>radius+aa*.6)continue;
+  float selected=step(.76,hash(id+vec2(307.1,29.4)+layer*41.));
+  float jewel=step(3.5,layer)*selected;
+  if(dist>max(radius+aa*.6,jewel*scale/cssShort*3.))continue;
   float core=1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist);
 
 
@@ -75,23 +77,28 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float curve=mix(1.4,2.8,hash(id+vec2(73.2,351.6)+layer*11.));
   float visibility=pow(envelope,curve);
   float depth=mix(.50,1.,hash(id+vec2(271.8,63.5)+layer*7.));
-  float selected=step(.76,hash(id+vec2(307.1,29.4)+layer*41.));
   float peak=mix(.50,1.02,selected);
   // Gentle independent ~4–13 second scintillation above the slow breathing cycle.
   float microPhase=hash(id+vec2(119.4,263.7)+layer*31.1)*6.2831853;
-  float microRate=mix(.37,1.26,hash(id+vec2(347.9,54.3)+layer*13.7));
+  float microRate=mix(.7,1.9,hash(id+vec2(347.9,54.3)+layer*13.7));
   float microWave=.5+.5*sin(t*microRate*1.3+microPhase);
-  float microAmount=mix(.025,.095,hash(id+vec2(83.6,179.2)+layer*47.3));
+  float microAmount=mix(.04,.10,hash(id+vec2(83.6,179.2)+layer*47.3))+selected*.22;
   float sparkle=(.16+peak*visibility*depth)*(1.-microAmount+2.*microAmount*microWave);
   sparkle+=.035*microWave*microWave;
   float bright=mix(.21,1.48,pow(hash(id+42.8),3.));
   vec3 tint=mix(vec3(.40,.59,.95),vec3(.89,.94,1.),hash(id+19.));
   // Brighter stars gain a crisp white-blue core, without amplifying the dusty halo.
-  vec3 pinLight=vec3(.86,.94,1.)*core*present*selected*(.10+.85*visibility)*(.8+.2*microWave);
+  vec3 pinLight=vec3(.86,.94,1.)*core*present*selected*(.18+1.05*visibility)*(.45+1.1*microWave*microWave);
   // Omit intrinsically faint grains; keep the bright-core group and naturally bright stars.
   // The selection is stable over time, avoiding threshold-driven popping during twinkles.
   float clearStar=max(selected,step(.8,bright));
-  result+=(tint*core*present*bright*sparkle+pinLight)*clearStar;
+  float rPx=dist*cssShort/scale;
+  vec2 dPx=(f-center)*cssShort/scale;
+  float glimmer=pow(microWave,5.)*jewel;
+  float halo=.33*exp(-rPx/1.05);
+  float rays=.35*(exp(-abs(dPx.x)*3.-abs(dPx.y)/1.3)+exp(-abs(dPx.y)*3.-abs(dPx.x)/1.3));
+  vec3 sparkleLight=vec3(.73,.86,1.)*(halo+rays)*glimmer;
+  result+=((tint*core*present*bright*sparkle+pinLight)*clearStar+sparkleLight);
   }
   return result;
  }
@@ -101,28 +108,33 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec2 farP=p-vec2(0.,camera*.24);
   vec2 midP=p-vec2(0.,camera*.65);
   vec2 nearP=p-vec2(0.,camera*1.12);
-  vec2 q=flow(midP,t*6.24);
+  vec2 q=flow(midP,t*8.112);
   float ribbon=band(q,1.35);
   vec2 cloud=q*3.5+vec2(t*.00015,-t*.00011);
   float folds=fbm(cloud+vec2(noise(cloud*.8+t*.0002),noise(cloud*.8+7.1-t*.0002)));
   float wisps=fbm(q*15.+folds*2.+vec2(t*.00022,0.));
   float dust=pow(folds,1.65)*ribbon;
   float darkLane=smoothstep(.40,.66,fbm(q*8.1+vec2(3.7,t*.00008)));
-  vec3 col=vec3(.003,.006,.016);
+  float violet=smoothstep(.32,.68,noise(cloud*.53+vec2(17.3,scene.z*4.)));
+  vec3 cloudTint=mix(vec3(.051,.138,.35),vec3(.155,.065,.29),violet*.72);
+  vec3 col=vec3(.002,.004,.010);
   col+=vec3(.002,.005,.011)*(.45+folds*.55);
-  col+=vec3(.051,.138,.35)*dust*(.55+wisps*.8)*(1.-darkLane*.68);
+  col+=cloudTint*dust*(.55+wisps*.8)*(1.-darkLane*.68);
   col+=vec3(.006,.016,.036)*ribbon;
   col+=vec3(.043,.103,.225)*pow(ribbon,3.)*pow(wisps,3.);
-  // Very faint screen blend confined to the cloud ribbon; stars are added afterwards.
+  // Dark sky with localized luminous blue/violet screen-blended cloud highlights.
   float opticalMask=pow(ribbon,1.8)*pow(folds,.9)*(.55+wisps*.45)*(1.-darkLane*.8);
-  vec3 opticalLight=vec3(.13,.24,.42)*opticalMask;
-  col=mix(col,vec3(1.)-(vec3(1.)-col)*(vec3(1.)-opticalLight),.045);
+  col*=.72;
+  float hot=smoothstep(.53,.77,folds)*pow(ribbon,1.5)*(1.-darkLane*.7);
+  vec3 opticalTint=mix(vec3(.16,.3,.52),vec3(.36,.18,.48),violet);
+  vec3 opticalLight=clamp(opticalTint*opticalMask*.65+vec3(.48,.65,1.)*hot*1.35,0.,1.);
+  col=mix(col,vec3(1.)-(vec3(1.)-col)*(vec3(1.)-opticalLight),.25);
   float density=band(q,1.)*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
-  col+=stars(flow(farP,t*5.6784)+3.71,285.,2.,density,t)*.48;
-  col+=stars(flow(nearP,t*6.6768)-8.31,420.,3.,density,t)*.32;
+  col+=stars(flow(farP,t*7.38192)+3.71,285.,2.,density,t)*.48;
+  col+=stars(flow(nearP,t*8.67984)-8.31,420.,3.,density,t)*.32;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
-  col+=stars(flow(nearP,t*6.24)+11.73,62.,4.,density*.16,t)*.63;
+  col+=stars(flow(nearP,t*8.112)+11.73,62.,4.,density*.16,t)*.63;
   // Just five independent grains, matching the existing stars in apparent size.
   // Their positions are calculated once per frame on the CPU, not per fragment.
   for(int i=0;i<5;i++){
@@ -192,7 +204,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   nextPaint=now+1000/30-1;
   const delta=last===null?0:Math.min((now-last)/1000,.1);last=now;
   if(!paused){elapsed+=delta;scrollPosition+=(scrollTarget-scrollPosition)*(1.-Math.exp(-delta/.65));}
-  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(viewWidth,viewHeight));gl.uniform1f(cameraUniform,140.*Math.tanh(scrollPosition/3600.)/Math.min(viewWidth,viewHeight));updateWanderers();gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;reveal(canvas);}
+  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(viewWidth,viewHeight));gl.uniform1f(cameraUniform,scrollPosition*.035/Math.min(viewWidth,viewHeight));updateWanderers();gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;reveal(canvas);}
   if(!paused)frame=requestAnimationFrame(draw);
  }
  function request(){if(!frame&&!lost&&!document.hidden)frame=requestAnimationFrame(draw)}
