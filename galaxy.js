@@ -19,18 +19,18 @@ window.createGalaxy=function(canvas,initiallyPaused){
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=mat2(.8,-.6,.6,.8)*p*2.03+3.71;a*=.5;}return v;}
  mat2 turn(float a){return mat2(cos(a),-sin(a),sin(a),cos(a));}
- // Shared smooth flow carries both dust and stars. The shared current moves gently; stars retain individual drift.
+ // Bounded wave deformation and a gentle through-current; no accumulated radial twist.
  vec2 flow(vec2 p,float t){
-  p=turn(.27+sin(t*.002)*.07)*p;
-  float r=length(p);
-  p=turn(t*.0018/(1.+r*.55))*p;
-  p+=vec2(sin(p.y*2.4+t*.004),cos(p.x*2.1-t*.003))*.075;
+  p=turn(.27+sin(t*.002)*.035)*p;
+  p.x+=t*.0012;
+  p.y+=sin(t*.003)*.035;
+  p+=vec2(sin(p.y*2.4+t*.004),cos(p.x*2.1-t*.003))*.055;
   return p;
  }
  float band(vec2 p,float coverage){
   float bend=.15*sin(p.x*2.1+scene.z*6.2831853)+.06*sin(p.x*4.2+1.7+scene.z*4.);
   // Project the viewport onto the band normal, keeping coverage stable in portrait/landscape.
-  float angle=.27+sin(clock*6.24*.002)*.07+clock*6.24*.0018/(1.+length(p)*.55);
+  float angle=.27+sin(clock*6.24*.002)*.035;
   float span=(abs(sin(angle))*resolution.x+abs(cos(angle))*resolution.y)/min(resolution.x,resolution.y);
   float width=(.13+.035*(.5+.5*sin(p.x*2.5+.6)))*coverage*max(1.,span);
   float d=(p.y-bend)/width;
