@@ -113,6 +113,10 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col+=vec3(.051,.138,.35)*dust*(.55+wisps*.8)*(1.-darkLane*.68);
   col+=vec3(.006,.016,.036)*ribbon;
   col+=vec3(.043,.103,.225)*pow(ribbon,3.)*pow(wisps,3.);
+  // Very faint screen blend confined to the cloud ribbon; stars are added afterwards.
+  float opticalMask=pow(ribbon,1.8)*pow(folds,.9)*(.55+wisps*.45)*(1.-darkLane*.8);
+  vec3 opticalLight=vec3(.13,.24,.42)*opticalMask;
+  col=mix(col,vec3(1.)-(vec3(1.)-col)*(vec3(1.)-opticalLight),.045);
   float density=band(q,1.)*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
   col+=stars(flow(farP,t*5.6784)+3.71,285.,2.,density,t)*.48;
