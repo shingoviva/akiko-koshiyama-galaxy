@@ -19,18 +19,24 @@ window.createGalaxy=function(canvas,initiallyPaused){
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=mat2(.8,-.6,.6,.8)*p*2.03+3.71;a*=.5;}return v;}
  mat2 turn(float a){return mat2(cos(a),-sin(a),sin(a),cos(a));}
- // Bounded wave deformation and a gentle through-current; no accumulated radial twist.
+ // Bounded, spatially varying currents: no global translation or accumulating rotation.
+ // Incommensurate slow phases avoid an obvious shared rhythm; small gradients avoid folding.
  vec2 flow(vec2 p,float t){
-  p=turn(.27+sin(t*.002)*.035)*p;
-  p.x+=t*.0012;
-  p.y+=sin(t*.003)*.035;
-  p+=vec2(sin(p.y*2.4+t*.004),cos(p.x*2.1-t*.003))*.055;
-  return p;
+  p=turn(.27)*p;
+  vec2 base=p;
+  float phase=scene.z*6.2831853;
+  vec2 broad=vec2(sin(base.y*1.7+base.x*.4+t*.00071+phase),
+                  cos(base.x*1.5-base.y*.3-t*.00043+phase*1.37));
+  vec2 middle=vec2(cos(base.x*2.3-base.y*1.1-t*.00097+phase*2.11),
+                   sin(base.y*2.1+base.x*.8+t*.00059+phase*.73));
+  vec2 fine=vec2(sin(base.y*3.2+base.x*1.3+t*.00037+phase*1.83),
+                 cos(base.x*2.9-base.y*1.5-t*.00083+phase*2.47));
+  return base+broad*.030+middle*.018+fine*.012;
  }
  float band(vec2 p,float coverage){
   float bend=.15*sin(p.x*2.1+scene.z*6.2831853)+.06*sin(p.x*4.2+1.7+scene.z*4.);
   // Project the viewport onto the band normal, keeping coverage stable in portrait/landscape.
-  float angle=.27+sin(clock*6.24*.002)*.035;
+  float angle=.27;
   float span=(abs(sin(angle))*resolution.x+abs(cos(angle))*resolution.y)/min(resolution.x,resolution.y);
   float width=(.13+.035*(.5+.5*sin(p.x*2.5+.6)))*coverage*max(1.,span);
   float d=(p.y-bend)/width;
@@ -74,11 +80,11 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec2 nearP=p-vec2(0.,camera*1.12);
   vec2 q=flow(midP,t*6.24);
   float ribbon=band(q,1.35);
-  vec2 cloud=q*3.5+vec2(t*.0008,-t*.0006);
-  float folds=fbm(cloud+vec2(noise(cloud*.8+t*.001),noise(cloud*.8+7.1-t*.001)));
-  float wisps=fbm(q*15.+folds*2.+vec2(t*.0012,0.));
+  vec2 cloud=q*3.5+vec2(t*.00015,-t*.00011);
+  float folds=fbm(cloud+vec2(noise(cloud*.8+t*.0002),noise(cloud*.8+7.1-t*.0002)));
+  float wisps=fbm(q*15.+folds*2.+vec2(t*.00022,0.));
   float dust=pow(folds,1.65)*ribbon;
-  float darkLane=smoothstep(.40,.66,fbm(q*8.1+vec2(3.7,t*.0004)));
+  float darkLane=smoothstep(.40,.66,fbm(q*8.1+vec2(3.7,t*.00008)));
   vec3 col=vec3(.003,.006,.016);
   col+=vec3(.002,.005,.011)*(.45+folds*.55);
   col+=vec3(.051,.138,.35)*dust*(.55+wisps*.8)*(1.-darkLane*.68);
