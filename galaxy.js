@@ -28,8 +28,11 @@ window.createGalaxy=function(canvas,initiallyPaused){
   return p;
  }
  float band(vec2 p,float coverage){
-  float bend=.19*sin(p.x*2.1+scene.z*6.2831853)+.08*sin(p.x*4.2+1.7+scene.z*4.);
-  float width=(.105+.055*(.5+.5*sin(p.x*2.5+.6)))*coverage;
+  float bend=.15*sin(p.x*2.1+scene.z*6.2831853)+.06*sin(p.x*4.2+1.7+scene.z*4.);
+  // Project the viewport onto the band normal, keeping coverage stable in portrait/landscape.
+  float angle=.27+sin(clock*6.24*.002)*.07+clock*6.24*.0018/(1.+length(p)*.55);
+  float span=(abs(sin(angle))*resolution.x+abs(cos(angle))*resolution.y)/min(resolution.x,resolution.y);
+  float width=(.13+.035*(.5+.5*sin(p.x*2.5+.6)))*coverage*max(1.,span);
   float d=(p.y-bend)/width;
   return exp(-d*d*.5);
  }
@@ -40,13 +43,13 @@ window.createGalaxy=function(canvas,initiallyPaused){
   // Each particle has its own oscillatory drift: no rigid sheet translation.
   center+=.065*vec2(sin(t*(.045+seed*.055)+seed*41.),cos(t*(.035+seed*.048)+seed*73.));
   float dist=length(f-center);
-  float radius=max(mix(.035,.18,pow(hash(id+layer+12.3),2.6)),.32*scale/cssShort);
+  float radius=max(mix(.038,.195,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort);
   float aa=scale/min(resolution.x,resolution.y);
   float core=1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist);
   float halo=exp(-dist*dist/(radius*radius*5.))* .14;
   // Independent thinning keeps the galactic density profile and twinkle distribution.
   float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.28);
-  float present=step(seed,.025+density*.66)*retained;
+  float present=step(seed,.045+density*.66)*retained;
   // Most grains remain steady; only a sparse, independently seeded subset twinkles.
   float phase=hash(id+vec2(193.7,81.2)+layer*9.1)*6.2831853;
   // Independent 100–300 second cycles with gradual, individually varied brightness envelopes.
@@ -56,8 +59,8 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float curve=mix(1.4,2.8,hash(id+vec2(73.2,351.6)+layer*11.));
   float visibility=pow(envelope,curve);
   float depth=mix(.50,1.,hash(id+vec2(271.8,63.5)+layer*7.));
-  float selected=step(.90,hash(id+vec2(307.1,29.4)+layer*41.));
-  float peak=mix(.50,.64,selected);
+  float selected=step(.84,hash(id+vec2(307.1,29.4)+layer*41.));
+  float peak=mix(.50,.82,selected);
   float sparkle=.16+peak*visibility*depth;
   float bright=mix(.21,1.48,pow(hash(id+42.8),3.));
   vec3 tint=mix(vec3(.40,.59,.95),vec3(.89,.94,1.),hash(id+19.));
@@ -70,13 +73,14 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec2 midP=p-vec2(0.,camera*.65);
   vec2 nearP=p-vec2(0.,camera*1.12);
   vec2 q=flow(midP,t*6.24);
-  float ribbon=band(q,1.25);
+  float ribbon=band(q,1.35);
   vec2 cloud=q*3.5+vec2(t*.0008,-t*.0006);
   float folds=fbm(cloud+vec2(noise(cloud*.8+t*.001),noise(cloud*.8+7.1-t*.001)));
   float wisps=fbm(q*15.+folds*2.+vec2(t*.0012,0.));
   float dust=pow(folds,1.65)*ribbon;
   float darkLane=smoothstep(.40,.66,fbm(q*8.1+vec2(3.7,t*.0004)));
   vec3 col=vec3(.003,.006,.016);
+  col+=vec3(.002,.005,.011)*(.45+folds*.55);
   col+=vec3(.051,.138,.35)*dust*(.55+wisps*.8)*(1.-darkLane*.68);
   col+=vec3(.006,.016,.036)*ribbon;
   col+=vec3(.043,.103,.225)*pow(ribbon,3.)*pow(wisps,3.);
