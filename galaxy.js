@@ -3,12 +3,17 @@ window.createGalaxy=function(canvas,initiallyPaused){
  'use strict';
  const gl=canvas.getContext('webgl',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'low-power'});
  let paused=initiallyPaused,elapsed=0,last=null,frame=0,dirty=true,lost=false,nextPaint=0;
+ const scene=new Float32Array([Math.random()*71,Math.random()*71,Math.random()]);
+ let scrollTarget=scrollY,scrollPosition=scrollY,viewWidth=0,viewHeight=0;
+ const stableViewport=matchMedia('(pointer:coarse)').matches;
  const vertex=`attribute vec2 position;void main(){gl_Position=vec4(position,0.,1.);}`;
  const fragment=`precision highp float;
  uniform vec2 resolution;
  uniform float clock;
  uniform float cssShort;
- float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+ uniform vec3 scene;
+ uniform float camera;
+ float hash(vec2 p){return fract(sin(dot(p+scene.xy,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=mat2(.8,-.6,.6,.8)*p*2.03+3.71;a*=.5;}return v;}
  mat2 turn(float a){return mat2(cos(a),-sin(a),sin(a),cos(a));}
@@ -21,7 +26,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   return p;
  }
  float band(vec2 p,float coverage){
-  float bend=.19*sin(p.x*2.1)+.08*sin(p.x*4.2+1.7);
+  float bend=.19*sin(p.x*2.1+scene.z*6.2831853)+.08*sin(p.x*4.2+1.7+scene.z*4.);
   float width=(.105+.055*(.5+.5*sin(p.x*2.5+.6)))*coverage;
   float d=(p.y-bend)/width;
   return exp(-d*d*.5);
@@ -59,7 +64,10 @@ window.createGalaxy=function(canvas,initiallyPaused){
  void main(){
   vec2 p=(gl_FragCoord.xy-.5*resolution)/min(resolution.x,resolution.y);
   float t=clock;
-  vec2 q=flow(p,t*3.9);
+  vec2 farP=p+vec2(0.,camera*.28);
+  vec2 midP=p+vec2(0.,camera*.58);
+  vec2 nearP=p+vec2(0.,camera);
+  vec2 q=flow(midP,t*3.9);
   float ribbon=band(q,1.25);
   vec2 cloud=q*3.5+vec2(t*.0008,-t*.0006);
   float folds=fbm(cloud+vec2(noise(cloud*.8+t*.001),noise(cloud*.8+7.1-t*.001)));
@@ -72,23 +80,28 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col+=vec3(.043,.103,.225)*pow(ribbon,3.)*pow(wisps,3.);
   float density=band(q,1.)*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
-  col+=stars(flow(p,t*3.549)+3.71,285.,2.,density,t)*.48;
-  col+=stars(flow(p,t*4.173)-8.31,420.,3.,density,t)*.32;
+  col+=stars(flow(farP,t*3.549)+3.71,285.,2.,density,t)*.48;
+  col+=stars(flow(nearP,t*4.173)-8.31,420.,3.,density,t)*.32;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
-  col+=stars(q+11.73,62.,4.,density*.16,t)*.63;
+  col+=stars(flow(nearP,t*3.9)+11.73,62.,4.,density*.16,t)*.63;
   gl_FragColor=vec4(col,1.);
  }`;
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader}
- let program,resolution,clock,cssShort;
+ let program,resolution,clock,cssShort,sceneUniform,cameraUniform;
  function setup(){
   program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   gl.useProgram(program);const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
   const position=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
-  resolution=gl.getUniformLocation(program,'resolution');clock=gl.getUniformLocation(program,'clock');cssShort=gl.getUniformLocation(program,'cssShort');
+  resolution=gl.getUniformLocation(program,'resolution');clock=gl.getUniformLocation(program,'clock');cssShort=gl.getUniformLocation(program,'cssShort');sceneUniform=gl.getUniformLocation(program,'scene');cameraUniform=gl.getUniformLocation(program,'camera');gl.uniform3fv(sceneUniform,scene);
  }
  function size(){
-  const w=innerWidth,h=Math.max(innerHeight,document.documentElement.clientHeight),ratio=Math.min(devicePixelRatio||1,1.25,Math.sqrt(950000/(w*h)));
+  const w=innerWidth;
+  // Ignore mobile toolbar height changes: no rescale or reallocation while scrolling.
+  if(stableViewport&&viewWidth===w)return;
+  const h=stableViewport?Math.max(innerHeight,screen.height):Math.max(innerHeight,document.documentElement.clientHeight);
+  viewWidth=w;viewHeight=h;canvas.style.width=w+'px';canvas.style.height=h+'px';
+  const ratio=Math.min(devicePixelRatio||1,1.25,Math.sqrt(950000/(w*h)));
   const width=Math.round(w*ratio),height=Math.round(h*ratio);
   if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;dirty=true}
  }
@@ -97,8 +110,9 @@ window.createGalaxy=function(canvas,initiallyPaused){
   // A 30 fps ceiling is sufficient for slow currents and soft twinkling.
   if(!dirty&&now<nextPaint){if(!paused)frame=requestAnimationFrame(draw);return}
   nextPaint=now+1000/30-1;
-  if(last!==null&&!paused)elapsed+=Math.min((now-last)/1000,.08);last=now;
-  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(innerWidth,Math.max(innerHeight,document.documentElement.clientHeight)));gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;}
+  const delta=last===null?0:Math.min((now-last)/1000,.1);last=now;
+  if(!paused){elapsed+=delta;scrollPosition+=(scrollTarget-scrollPosition)*(1.-Math.exp(-delta/.65));}
+  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(viewWidth,viewHeight));gl.uniform1f(cameraUniform,22.*Math.tanh(scrollPosition/2200.)/Math.min(viewWidth,viewHeight));gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;}
   if(!paused)frame=requestAnimationFrame(draw);
  }
  function request(){if(!frame&&!lost&&!document.hidden)frame=requestAnimationFrame(draw)}
@@ -106,9 +120,10 @@ window.createGalaxy=function(canvas,initiallyPaused){
  if(!gl){
   const replacement=document.createElement('canvas');replacement.id=canvas.id;replacement.setAttribute('aria-hidden','true');canvas.replaceWith(replacement);
   const ctx=replacement.getContext('2d');
-  function fallback(){const w=innerWidth,h=innerHeight,d=Math.min(devicePixelRatio||1,1.5);replacement.width=w*d;replacement.height=h*d;ctx.scale(d,d);ctx.fillStyle='#02040b';ctx.fillRect(0,0,w,h);let seed=727;function random(){seed=(seed*16807)%2147483647;return seed/2147483647}for(let i=0;i<26000;i++){const x=random()*w,y=random()*h,u=(x-w*.5)/Math.min(w,h),v=(y-h*.5)/Math.min(w,h),b=Math.exp(-Math.pow((v-.3*u-.18*Math.sin(u*2))/.17,2));if(random()>.025+b*.7)continue;ctx.fillStyle=`rgba(145,181,244,${.12+random()*.6})`;const r=.25+Math.pow(random(),5)*.8;ctx.fillRect(x,y,r,r)}}
+  function fallback(){const w=innerWidth,h=innerHeight,d=Math.min(devicePixelRatio||1,1.5);replacement.width=w*d;replacement.height=h*d;ctx.scale(d,d);ctx.fillStyle='#02040b';ctx.fillRect(0,0,w,h);let seed=1+Math.floor(scene[0]*1000000);function random(){seed=(seed*16807)%2147483647;return seed/2147483647}for(let i=0;i<26000;i++){const x=random()*w,y=random()*h,u=(x-w*.5)/Math.min(w,h),v=(y-h*.5)/Math.min(w,h),b=Math.exp(-Math.pow((v-.3*u-.18*Math.sin(u*2))/.17,2));if(random()>.025+b*.7)continue;ctx.fillStyle=`rgba(145,181,244,${.12+random()*.6})`;const r=.25+Math.pow(random(),5)*.8;ctx.fillRect(x,y,r,r)}}
   fallback();addEventListener('resize',fallback,{passive:true});return{setPaused(){},renderer:'canvas-static'};
  }
+ addEventListener('scroll',()=>{scrollTarget=Math.max(0,scrollY)},{passive:true});
  setup();size();request();
  addEventListener('resize',()=>{size();request()},{passive:true});
  document.addEventListener('visibilitychange',()=>{last=null;if(document.hidden){cancelAnimationFrame(frame);frame=0}else request()});
