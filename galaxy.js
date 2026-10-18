@@ -68,19 +68,19 @@ window.createGalaxy=function(canvas,initiallyPaused){
 
   // Most grains remain steady; only a sparse, independently seeded subset twinkles.
   float phase=hash(id+vec2(193.7,81.2)+layer*9.1)*6.2831853;
-  // Independent 100–300 second cycles with gradual, individually varied brightness envelopes.
+  // Independent ~77–230 second cycles with gradual, individually varied brightness envelopes.
   float rate=mix(.021,.063,hash(id+vec2(51.8,217.3)+layer*23.));
-  float wave=.5+.5*sin(t*rate+phase);
+  float wave=.5+.5*sin(t*rate*1.3+phase);
   float envelope=smoothstep(0.,1.,wave);
   float curve=mix(1.4,2.8,hash(id+vec2(73.2,351.6)+layer*11.));
   float visibility=pow(envelope,curve);
   float depth=mix(.50,1.,hash(id+vec2(271.8,63.5)+layer*7.));
   float selected=step(.76,hash(id+vec2(307.1,29.4)+layer*41.));
   float peak=mix(.50,1.02,selected);
-  // Gentle independent 5–17 second scintillation above the slow breathing cycle.
+  // Gentle independent ~4–13 second scintillation above the slow breathing cycle.
   float microPhase=hash(id+vec2(119.4,263.7)+layer*31.1)*6.2831853;
   float microRate=mix(.37,1.26,hash(id+vec2(347.9,54.3)+layer*13.7));
-  float microWave=.5+.5*sin(t*microRate+microPhase);
+  float microWave=.5+.5*sin(t*microRate*1.3+microPhase);
   float microAmount=mix(.025,.095,hash(id+vec2(83.6,179.2)+layer*47.3));
   float sparkle=(.16+peak*visibility*depth)*(1.-microAmount+2.*microAmount*microWave);
   sparkle+=.035*microWave*microWave;
@@ -164,7 +164,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
    wandererData[i*4]=(.35*Math.sin(t*.00035+s.phase)+.055*Math.sin(t*.00081+s.phase*2.17))*viewWidth/short;
    wandererData[i*4+1]=(.35*Math.cos(t*.00029+s.phase*1.37)+.055*Math.sin(t*.00067+s.phase*3.11))*viewHeight/short;
    wandererData[i*4+2]=s.radius;
-   wandererData[i*4+3]=s.light*(.94+.06*Math.sin(elapsed*.53+s.phase));
+   wandererData[i*4+3]=s.light*(.94+.06*Math.sin(elapsed*.689+s.phase));
   });
   gl.uniform4fv(wandererUniform,wandererData);
  }
