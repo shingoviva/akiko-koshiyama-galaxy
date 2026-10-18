@@ -122,6 +122,8 @@ window.createGalaxy=function(canvas,initiallyPaused){
    float rays=.48*(exp(-abs(delta.x)*2.-abs(delta.y)/4.5)+exp(-abs(delta.y)*2.-abs(delta.x)/4.5));
    col+=vec3(.78,.89,1.)*(core+bloom+rays)*envelope;
   }
+  // A restrained contrast curve deepens the dark sky while preserving luminous cores.
+  col=pow(max(col,vec3(0.)),vec3(1.035))*.98;
   gl_FragColor=vec4(col,1.);
  }`;
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader}
