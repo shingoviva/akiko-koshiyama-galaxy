@@ -52,7 +52,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float radius=max(mix(.038,.17,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort);
   float aa=scale/min(resolution.x,resolution.y);
   float core=1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist);
-  float halo=exp(-dist*dist/(radius*radius*5.))* .14;
+
   // Independent thinning keeps the galactic density profile and twinkle distribution.
   float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.28);
   float present=step(seed,.045+density*.66)*retained;
@@ -78,7 +78,10 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec3 tint=mix(vec3(.40,.59,.95),vec3(.89,.94,1.),hash(id+19.));
   // Brighter stars gain a crisp white-blue core, without amplifying the dusty halo.
   vec3 pinLight=vec3(.86,.94,1.)*core*present*selected*(.10+.85*visibility)*(.8+.2*microWave);
-  return tint*(core+halo)*present*bright*sparkle+pinLight;
+  // Omit intrinsically faint grains; keep the bright-core group and naturally bright stars.
+  // The selection is stable over time, avoiding threshold-driven popping during twinkles.
+  float clearStar=max(selected,step(.8,bright));
+  return (tint*core*present*bright*sparkle+pinLight)*clearStar;
  }
  void main(){
   vec2 p=(gl_FragCoord.xy-.5*resolution)/min(resolution.x,resolution.y);
