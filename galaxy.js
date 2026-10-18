@@ -43,7 +43,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   // Each particle has its own oscillatory drift: no rigid sheet translation.
   center+=.065*vec2(sin(t*(.045+seed*.055)+seed*41.),cos(t*(.035+seed*.048)+seed*73.));
   float dist=length(f-center);
-  float radius=max(mix(.038,.195,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort);
+  float radius=max(mix(.038,.17,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort);
   float aa=scale/min(resolution.x,resolution.y);
   float core=1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist);
   float halo=exp(-dist*dist/(radius*radius*5.))* .14;
@@ -90,19 +90,19 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col+=stars(flow(nearP,t*6.6768)-8.31,420.,3.,density,t)*.32;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
   col+=stars(flow(nearP,t*6.24)+11.73,62.,4.,density*.16,t)*.63;
-  // One isolated glint per ~2–4 minutes. No rapid flickering or simultaneous flashes.
-  float cycle=floor(t/180.);
-  float start=45.+hash(vec2(cycle+23.1,91.7))*60.;
-  float age=mod(t,180.)-start;
+  // One isolated glint per ~1.5–3 minutes. No rapid flickering or simultaneous flashes.
+  float cycle=floor(t/135.);
+  float start=35.+hash(vec2(cycle+23.1,91.7))*45.;
+  float age=mod(t,135.)-start;
   if(age>0.&&age<3.8){
    float envelope=smoothstep(0.,1.1,age)*(1.-smoothstep(1.3,3.8,age));
    vec2 anchor=(vec2(hash(vec2(cycle+61.4,7.9)),hash(vec2(cycle+13.2,83.6)))-.5)*.72;
    anchor*=resolution/min(resolution.x,resolution.y);
    vec2 delta=(p-anchor)*cssShort;
    float distance=length(delta);
-   float core=2.4*exp(-distance*distance/1.3);
-   float bloom=.32*exp(-distance/3.5);
-   float rays=.48*(exp(-abs(delta.x)*2.-abs(delta.y)/5.)+exp(-abs(delta.y)*2.-abs(delta.x)/5.));
+   float core=2.4*exp(-distance*distance/1.05);
+   float bloom=.32*exp(-distance/3.1);
+   float rays=.48*(exp(-abs(delta.x)*2.-abs(delta.y)/4.5)+exp(-abs(delta.y)*2.-abs(delta.x)/4.5));
    col+=vec3(.78,.89,1.)*(core+bloom+rays)*envelope;
   }
   gl_FragColor=vec4(col,1.);
