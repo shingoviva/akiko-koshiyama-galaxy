@@ -20,9 +20,9 @@ window.createGalaxy=function(canvas,initiallyPaused){
   p+=vec2(sin(p.y*2.4+t*.004),cos(p.x*2.1-t*.003))*.075;
   return p;
  }
- float band(vec2 p){
+ float band(vec2 p,float coverage){
   float bend=.19*sin(p.x*2.1)+.08*sin(p.x*4.2+1.7);
-  float width=.105+.055*(.5+.5*sin(p.x*2.5+.6));
+  float width=(.105+.055*(.5+.5*sin(p.x*2.5+.6)))*coverage;
   float d=(p.y-bend)/width;
   return exp(-d*d*.5);
  }
@@ -60,17 +60,17 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec2 p=(gl_FragCoord.xy-.5*resolution)/min(resolution.x,resolution.y);
   float t=clock;
   vec2 q=flow(p,t*3.9);
-  float ribbon=band(q);
+  float ribbon=band(q,1.25);
   vec2 cloud=q*3.5+vec2(t*.0008,-t*.0006);
   float folds=fbm(cloud+vec2(noise(cloud*.8+t*.001),noise(cloud*.8+7.1-t*.001)));
   float wisps=fbm(q*15.+folds*2.+vec2(t*.0012,0.));
   float dust=pow(folds,1.65)*ribbon;
   float darkLane=smoothstep(.40,.66,fbm(q*8.1+vec2(3.7,t*.0004)));
   vec3 col=vec3(.003,.006,.016);
-  col+=vec3(.043,.115,.29)*dust*(.55+wisps*.8)*(1.-darkLane*.68);
+  col+=vec3(.051,.138,.35)*dust*(.55+wisps*.8)*(1.-darkLane*.68);
   col+=vec3(.006,.016,.036)*ribbon;
-  col+=vec3(.033,.078,.17)*pow(ribbon,3.)*pow(wisps,3.);
-  float density=ribbon*(.28+folds*.75)*(1.-darkLane*.45);
+  col+=vec3(.043,.103,.225)*pow(ribbon,3.)*pow(wisps,3.);
+  float density=band(q,1.)*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
   col+=stars(flow(p,t*3.549)+3.71,285.,2.,density,t)*.48;
   col+=stars(flow(p,t*4.173)-8.31,420.,3.,density,t)*.32;
