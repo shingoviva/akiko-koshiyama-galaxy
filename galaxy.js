@@ -113,7 +113,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec2 nearP=p-vec2(0.,camera*1.12);
   vec2 q=flow(midP,t*10.14);
   float ribbon=band(q,1.35);
-  vec2 cloud=q*4.6+vec2(t*.00019,-t*.00014);
+  vec2 cloud=q*2.5+vec2(t*.00019,-t*.00014);
   // Hierarchical gas masses and cavities, rather than stretched luminous ribbons.
   // Normalized coordinates keep all field operations bounded on mobile GPUs.
   vec2 warp=vec2(fbm(cloud*.62+t*.00025),fbm(cloud*.62+7.1-t*.00025))-.4375;
@@ -121,9 +121,9 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float bulk=fbm(domain*.74);
   float medium=fbm(domain*2.6+vec2(13.1,7.7));
   float detail=fbm(domain*8.2+vec2(t*.00028,0.));
-  float folds=clamp(bulk*.56+medium*.29+detail*.15,0.,1.);
-  // Soft coverage biases the composition without forcing gas into a single band.
-  ribbon=mix(.38,1.,ribbon);
+  float folds=clamp(bulk*.76+medium*.19+detail*.05,0.,1.);
+  // Broad cloud groups leave dark negative space; detail stays within their envelope.
+  ribbon=pow(ribbon,.65)*smoothstep(.27,.57,bulk);
   float mass=smoothstep(.22,.65,folds);
   float dust=pow(mass,1.45)*ribbon;
   float vein=fbm(domain*1.8+vec2(31.7,19.2));
@@ -133,7 +133,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   darkLane=max(darkLane,cavity*.82);
   float edge=(1.-smoothstep(.025,.13,ridge))*(.35+detail*.65);
   float filaments=edge*(.28+detail*.9)*smoothstep(.25,.55,folds);
-  float wisps=clamp(medium*.65+detail*.55+filaments*.3,0.,1.);
+  float wisps=clamp(medium*.85+detail*.22+filaments*.18,0.,1.);
   float violet=smoothstep(.27,.61,noise(cloud*.53+vec2(17.3,scene.z*4.)))*.82;
   vec3 cloudTint=mix(vec3(.051,.138,.35),vec3(.25,.075,.39),violet*.9);
   vec3 col=vec3(.002,.004,.010);
