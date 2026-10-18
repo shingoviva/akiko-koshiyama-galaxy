@@ -56,16 +56,16 @@ window.createGalaxy=function(canvas,initiallyPaused){
   for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){
   vec2 id=base+vec2(float(x),float(y)),f=grid-id;
   float seed=hash(id+layer*17.3);
-  float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.28);
+  float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.22);
   float present=step(seed,.025+density*.66)*retained;
   if(present<.5)continue;
   vec2 center=vec2(hash(id+31.7+layer),hash(id+87.1-layer))*.96+.02;
   // Each particle has its own oscillatory drift: no rigid sheet translation.
   center+=.065*vec2(sin(t*(.045+seed*.055)+seed*41.),cos(t*(.035+seed*.048)+seed*73.));
   float dist=length(f-center);
-  float radius=max(mix(.038,.17,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort);
-  float aa=scale/min(resolution.x,resolution.y);
   float selected=step(.76,hash(id+vec2(307.1,29.4)+layer*41.));
+  float radius=max(mix(.038,.17,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort)*mix(.72,1.,selected);
+  float aa=scale/min(resolution.x,resolution.y);
   float jewel=step(3.5,layer)*selected;
   if(dist>max(radius+aa*.6,jewel*scale/cssShort*3.))continue;
   float core=1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist);
