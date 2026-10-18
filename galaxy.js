@@ -15,6 +15,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
  uniform float cssShort;
  uniform vec3 scene;
  uniform float camera;
+ uniform vec4 wanderers[5];
  float hash(vec2 p){return fract(sin(dot(p+scene.xy,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=mat2(.8,-.6,.6,.8)*p*2.03+3.71;a*=.5;}return v;}
@@ -107,6 +108,17 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col+=stars(flow(nearP,t*6.6768)-8.31,420.,3.,density,t)*.32;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
   col+=stars(flow(nearP,t*6.24)+11.73,62.,4.,density*.16,t)*.63;
+  // Just five independent grains, matching the existing stars in apparent size.
+  // Their positions are calculated once per frame on the CPU, not per fragment.
+  for(int i=0;i<5;i++){
+   vec4 star=wanderers[i];
+   vec2 delta=(p-star.xy+vec2(0.,camera*.45))*cssShort;
+   if(max(abs(delta.x),abs(delta.y))<2.){
+    float aa=cssShort/min(resolution.x,resolution.y);
+    float point=1.-smoothstep(max(0.,star.z-aa*.55),star.z+aa*.55,length(delta));
+    col+=vec3(.82,.91,1.)*point*star.w;
+   }
+  }
   // One isolated glint per ~1.5–3 minutes. No rapid flickering or simultaneous flashes.
   float cycle=floor(t/135.);
   float start=35.+hash(vec2(cycle+23.1,91.7))*45.;
@@ -127,13 +139,26 @@ window.createGalaxy=function(canvas,initiallyPaused){
   gl_FragColor=vec4(col,1.);
  }`;
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader}
- let program,resolution,clock,cssShort,sceneUniform,cameraUniform;
+ const wandererData=new Float32Array(20);
+ const wandererSeeds=Array.from({length:5},()=>({phase:Math.random()*Math.PI*2,rate:.75+Math.random()*.5,radius:.38+Math.random()*.16,light:.45+Math.random()*.25}));
+ let program,resolution,clock,cssShort,sceneUniform,cameraUniform,wandererUniform;
+ function updateWanderers(){
+  const short=Math.min(viewWidth,viewHeight);
+  wandererSeeds.forEach((s,i)=>{
+   const t=elapsed*s.rate;
+   wandererData[i*4]=(.35*Math.sin(t*.00035+s.phase)+.055*Math.sin(t*.00081+s.phase*2.17))*viewWidth/short;
+   wandererData[i*4+1]=(.35*Math.cos(t*.00029+s.phase*1.37)+.055*Math.sin(t*.00067+s.phase*3.11))*viewHeight/short;
+   wandererData[i*4+2]=s.radius;
+   wandererData[i*4+3]=s.light*(.94+.06*Math.sin(elapsed*.53+s.phase));
+  });
+  gl.uniform4fv(wandererUniform,wandererData);
+ }
  function setup(){
   program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   gl.useProgram(program);const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
   const position=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
-  resolution=gl.getUniformLocation(program,'resolution');clock=gl.getUniformLocation(program,'clock');cssShort=gl.getUniformLocation(program,'cssShort');sceneUniform=gl.getUniformLocation(program,'scene');cameraUniform=gl.getUniformLocation(program,'camera');gl.uniform3fv(sceneUniform,scene);
+  resolution=gl.getUniformLocation(program,'resolution');clock=gl.getUniformLocation(program,'clock');cssShort=gl.getUniformLocation(program,'cssShort');sceneUniform=gl.getUniformLocation(program,'scene');cameraUniform=gl.getUniformLocation(program,'camera');gl.uniform3fv(sceneUniform,scene);wandererUniform=gl.getUniformLocation(program,'wanderers[0]');
  }
  function size(){
   const w=innerWidth;
@@ -152,7 +177,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   nextPaint=now+1000/30-1;
   const delta=last===null?0:Math.min((now-last)/1000,.1);last=now;
   if(!paused){elapsed+=delta;scrollPosition+=(scrollTarget-scrollPosition)*(1.-Math.exp(-delta/.65));}
-  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(viewWidth,viewHeight));gl.uniform1f(cameraUniform,140.*Math.tanh(scrollPosition/3600.)/Math.min(viewWidth,viewHeight));gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;reveal(canvas);}
+  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(viewWidth,viewHeight));gl.uniform1f(cameraUniform,140.*Math.tanh(scrollPosition/3600.)/Math.min(viewWidth,viewHeight));updateWanderers();gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;reveal(canvas);}
   if(!paused)frame=requestAnimationFrame(draw);
  }
  function request(){if(!frame&&!lost&&!document.hidden)frame=requestAnimationFrame(draw)}
