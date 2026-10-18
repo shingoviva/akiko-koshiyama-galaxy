@@ -35,11 +35,14 @@ window.createGalaxy=function(canvas,initiallyPaused){
   return base+broad*.030+middle*.018+fine*.012;
  }
  float band(vec2 p,float coverage){
-  float bend=.15*sin(p.x*2.1+scene.z*6.2831853)+.06*sin(p.x*4.2+1.7+scene.z*4.);
+  // Irregular large-scale cloud envelope rather than a repeating sinusoidal ribbon.
+  float broad=noise(vec2(p.x*.8,scene.z*7.1));
+  float edge=noise(vec2(p.x*1.7,13.3+scene.z*3.));
+  float bend=(broad-.5)*.32+(edge-.5)*.14;
   // Project the viewport onto the band normal, keeping coverage stable in portrait/landscape.
   float angle=.27;
   float span=(abs(sin(angle))*resolution.x+abs(cos(angle))*resolution.y)/min(resolution.x,resolution.y);
-  float width=(.13+.035*(.5+.5*sin(p.x*2.5+.6)))*coverage*max(1.,span);
+  float width=(.13+.035*broad)*coverage*max(1.,span);
   float d=(p.y-bend)/width;
   return exp(-d*d*.5);
  }
@@ -108,13 +111,23 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec2 farP=p-vec2(0.,camera*.24);
   vec2 midP=p-vec2(0.,camera*.65);
   vec2 nearP=p-vec2(0.,camera*1.12);
-  vec2 q=flow(midP,t*8.112);
+  vec2 q=flow(midP,t*10.14);
   float ribbon=band(q,1.35);
-  vec2 cloud=q*3.5+vec2(t*.00015,-t*.00011);
-  float folds=fbm(cloud+vec2(noise(cloud*.8+t*.0002),noise(cloud*.8+7.1-t*.0002)));
-  float wisps=fbm(q*15.+folds*2.+vec2(t*.00022,0.));
-  float dust=pow(folds,1.65)*ribbon;
-  float darkLane=smoothstep(.40,.66,fbm(q*8.1+vec2(3.7,t*.00008)));
+  vec2 cloud=q*3.5+vec2(t*.00019,-t*.00014);
+  // Large gas masses, finer turbulent folds, narrow filaments, and absorbing dust.
+  // All coordinates remain normalized: no large pixel-distance squares or new light loops.
+  vec2 warp=vec2(noise(cloud*.65+t*.00025),noise(cloud*.65+7.1-t*.00025))-.5;
+  vec2 domain=cloud+warp*.95;
+  float bulk=fbm(domain*.72);
+  float medium=fbm(domain*2.1+vec2(13.1,7.7));
+  float detail=noise(domain*10.7+vec2(t*.00028,0.));
+  float folds=clamp(bulk*.64+medium*.36,0.,1.);
+  float filamentField=noise(domain*vec2(4.8,2.3)+detail*.6);
+  float filaments=pow(clamp(1.-abs(2.*filamentField-1.),0.,1.),5.)*smoothstep(.3,.7,bulk);
+  float wisps=clamp(smoothstep(.3,.84,medium)*(.6+detail*.4)+filaments*.25,0.,1.);
+  float mass=smoothstep(.18,.74,folds);
+  float dust=pow(max(mass,0.),1.7)*ribbon;
+  float darkLane=smoothstep(.43,.70,noise(domain*vec2(3.2,5.7)+37.2)+.12*(detail-.5));
   float violet=smoothstep(.27,.61,noise(cloud*.53+vec2(17.3,scene.z*4.)))*.82;
   vec3 cloudTint=mix(vec3(.051,.138,.35),vec3(.25,.075,.39),violet*.9);
   vec3 col=vec3(.002,.004,.010);
@@ -122,6 +135,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col+=cloudTint*dust*(.55+wisps*.8)*(1.-darkLane*.68);
   col+=vec3(.006,.016,.036)*ribbon;
   col+=vec3(.043,.103,.225)*pow(ribbon,3.)*pow(wisps,3.);
+  col+=vec3(.025,.065,.13)*filaments*ribbon*(1.-darkLane*.85);
   // Dark sky with localized luminous blue/violet screen-blended cloud highlights.
   float opticalMask=pow(ribbon,1.8)*pow(folds,.9)*(.55+wisps*.45)*(1.-darkLane*.8);
   col*=.72;
@@ -129,12 +143,12 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec3 opticalTint=mix(vec3(.16,.3,.52),vec3(.52,.19,.68),violet);
   vec3 opticalLight=clamp(opticalTint*opticalMask*.82+mix(vec3(.48,.65,1.),vec3(.8,.38,1.),violet)*hot*1.65,0.,1.);
   col=mix(col,vec3(1.)-(vec3(1.)-col)*(vec3(1.)-opticalLight),.34);
-  float density=band(q,1.)*(.28+folds*.75)*(1.-darkLane*.45);
+  float density=pow(ribbon,1.8225)*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
-  col+=stars(flow(farP,t*7.38192)+3.71,285.,2.,density,t)*.48;
-  col+=stars(flow(nearP,t*8.67984)-8.31,420.,3.,density,t)*.32;
+  col+=stars(flow(farP,t*9.2274)+3.71,285.,2.,density,t)*.48;
+  col+=stars(flow(nearP,t*10.8498)-8.31,420.,3.,density,t)*.32;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
-  col+=stars(flow(nearP,t*8.112)+11.73,62.,4.,density*.16,t)*.63;
+  col+=stars(flow(nearP,t*10.14)+11.73,62.,4.,density*.16,t)*.63;
   // Just five independent grains, matching the existing stars in apparent size.
   // Their positions are calculated once per frame on the CPU, not per fragment.
   for(int i=0;i<5;i++){
