@@ -57,7 +57,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec2 id=base+vec2(float(x),float(y)),f=grid-id;
   float seed=hash(id+layer*17.3);
   float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.28);
-  float present=step(seed,.045+density*.66)*retained;
+  float present=step(seed,.025+density*.66)*retained;
   if(present<.5)continue;
   vec2 center=vec2(hash(id+31.7+layer),hash(id+87.1-layer))*.96+.02;
   // Each particle has its own oscillatory drift: no rigid sheet translation.
@@ -89,7 +89,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float sparkle=(.16+peak*visibility*depth)*(1.-microAmount+2.*microAmount*microWave);
   sparkle+=.035*microWave*microWave;
   float bright=mix(.21,1.48,pow(hash(id+42.8),3.));
-  vec3 tint=mix(vec3(.40,.59,.95),vec3(.89,.94,1.),hash(id+19.));
+  vec3 tint=mix(vec3(.76,.79,.84),vec3(.96,.97,1.),hash(id+19.));
   // Brighter stars gain a crisp white-blue core, without amplifying the dusty halo.
   vec3 pinLight=vec3(.86,.94,1.)*core*present*selected*(.18+1.05*visibility)*(.45+1.1*microWave*microWave);
   // Omit intrinsically faint grains; keep the bright-core group and naturally bright stars.
@@ -149,13 +149,13 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec3 opticalTint=mix(vec3(.16,.3,.52),vec3(.52,.19,.68),violet);
   vec3 opticalLight=clamp(opticalTint*opticalMask*.82+mix(vec3(.48,.65,1.),vec3(.8,.38,1.),violet)*hot*2.05,0.,1.);
   col=mix(col,vec3(1.)-(vec3(1.)-col)*(vec3(1.)-opticalLight),.39);
-  // Slightly richer cloud color, preserving luminance and leaving stars untouched.
+  // Silver nebula: faint neutral gas, with a trace of cool color.
   float cloudLuma=dot(col,vec3(.2126,.7152,.0722));
-  col=max(mix(vec3(cloudLuma),col,1.22),vec3(0.));
-  float density=pow(ribbon,1.8225)*(.28+folds*.75)*(1.-darkLane*.45);
-  col+=stars(q,175.,1.,density,t)*.69;
-  col+=stars(flow(farP,t*9.2274)+3.71,285.,2.,density,t)*.48;
-  col+=stars(flow(nearP,t*10.8498)-8.31,420.,3.,density,t)*.32;
+  col=max(mix(vec3(cloudLuma),col,.12),vec3(0.))*.38;
+  float density=pow(ribbon,1.9)*(.28+folds*.75)*(1.-darkLane*.45)*1.35;
+  col+=stars(q,175.,1.,density,t)*.82;
+  col+=stars(flow(farP,t*9.2274)+3.71,285.,2.,density,t)*.57;
+  col+=stars(flow(nearP,t*10.8498)-8.31,420.,3.,density,t)*.38;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
   col+=stars(flow(nearP,t*10.14)+11.73,62.,4.,density*.16,t)*.63;
   // Just five independent grains, matching the existing stars in apparent size.
