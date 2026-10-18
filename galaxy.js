@@ -16,6 +16,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
  uniform vec3 scene;
  uniform float camera;
  uniform vec4 wanderers[5];
+ uniform vec4 beacons[4];
  float hash(vec2 p){return fract(sin(dot(p+scene.xy,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=mat2(.8,-.6,.6,.8)*p*2.03+3.71;a*=.5;}return v;}
@@ -135,6 +136,28 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col+=stars(flow(nearP,t*8.67984)-8.31,420.,3.,density,t)*.32;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
   col+=stars(flow(nearP,t*8.112)+11.73,62.,4.,density*.16,t)*.63;
+  // Four sparse optical stars: a bright core, a breathing halo, and short rays.
+  // The screen-edge anchors leave the central reading area quiet.
+  for(int i=0;i<4;i++){
+   vec4 beacon=beacons[i];
+   vec2 anchor=beacon.xy*resolution/min(resolution.x,resolution.y);
+   vec2 delta=(p-anchor+vec2(0.,camera*.035))*cssShort;
+   float r=length(delta);
+   float wave=.5+.5*sin(t*(.48+float(i)*.13)+beacon.w);
+   float flash=pow(wave,4.);
+   // Very soft localized light makes the nearby cloud seem illuminated from within.
+   float cloudCore=exp(-r*r/(cssShort*cssShort*.0045));
+   vec3 sourceTint=mix(vec3(.018,.055,.105),vec3(.055,.026,.095),float(i)*.14);
+   col+=sourceTint*cloudCore*(.45+.55*ribbon);
+   if(r<28.){
+    float radius=beacon.z*(1.+flash*.23);
+    float aa=cssShort/min(resolution.x,resolution.y);
+    float point=1.-smoothstep(max(0.,radius-aa*.5),radius+aa*.5,r);
+    float halo=.24*exp(-r/(2.+flash*4.5))*flash;
+    float rays=.30*(exp(-abs(delta.x)*2.5-abs(delta.y)/(2.5+flash*4.))+exp(-abs(delta.y)*2.5-abs(delta.x)/(2.5+flash*4.)))*flash;
+    col+=vec3(.8,.92,1.)*(point*(.5+flash*1.8)+halo+rays);
+   }
+  }
   // Just five independent grains, matching the existing stars in apparent size.
   // Their positions are calculated once per frame on the CPU, not per fragment.
   for(int i=0;i<5;i++){
@@ -166,6 +189,13 @@ window.createGalaxy=function(canvas,initiallyPaused){
   gl_FragColor=vec4(col,1.);
  }`;
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader}
+ const beaconData=new Float32Array(16);
+ [[-.36,.30],[.36,.12],[-.31,-.20],[.32,-.36]].forEach(([x,y],i)=>{
+  beaconData[i*4]=x+(Math.random()-.5)*.04;
+  beaconData[i*4+1]=y+(Math.random()-.5)*.08;
+  beaconData[i*4+2]=.65+Math.random()*.20;
+  beaconData[i*4+3]=Math.random()*Math.PI*2;
+ });
  const wandererData=new Float32Array(20);
  const wandererSeeds=Array.from({length:5},()=>({phase:Math.random()*Math.PI*2,rate:.75+Math.random()*.5,radius:.38+Math.random()*.16,light:.72+Math.random()*.18}));
  let program,resolution,clock,cssShort,sceneUniform,cameraUniform,wandererUniform;
@@ -185,7 +215,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   gl.useProgram(program);const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
   const position=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
-  resolution=gl.getUniformLocation(program,'resolution');clock=gl.getUniformLocation(program,'clock');cssShort=gl.getUniformLocation(program,'cssShort');sceneUniform=gl.getUniformLocation(program,'scene');cameraUniform=gl.getUniformLocation(program,'camera');gl.uniform3fv(sceneUniform,scene);wandererUniform=gl.getUniformLocation(program,'wanderers[0]');
+  resolution=gl.getUniformLocation(program,'resolution');clock=gl.getUniformLocation(program,'clock');cssShort=gl.getUniformLocation(program,'cssShort');sceneUniform=gl.getUniformLocation(program,'scene');cameraUniform=gl.getUniformLocation(program,'camera');gl.uniform3fv(sceneUniform,scene);wandererUniform=gl.getUniformLocation(program,'wanderers[0]');gl.uniform4fv(gl.getUniformLocation(program,'beacons[0]'),beaconData);
  }
  function size(){
   const w=innerWidth;
