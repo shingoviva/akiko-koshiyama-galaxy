@@ -7,6 +7,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
  const fragment=`precision highp float;
  uniform vec2 resolution;
  uniform float clock;
+ uniform float cssShort;
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=mat2(.8,-.6,.6,.8)*p*2.03+3.71;a*=.5;}return v;}
@@ -32,7 +33,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   // Each particle has its own oscillatory drift: no rigid sheet translation.
   center+=.065*vec2(sin(t*(.045+seed*.055)+seed*41.),cos(t*(.035+seed*.048)+seed*73.));
   float dist=length(f-center);
-  float radius=mix(.035,.18,pow(hash(id+layer+12.3),2.6));
+  float radius=max(mix(.035,.18,pow(hash(id+layer+12.3),2.6)),.32*scale/cssShort);
   float aa=scale/min(resolution.x,resolution.y);
   float core=1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist);
   float halo=exp(-dist*dist/(radius*radius*5.))* .14;
@@ -49,8 +50,8 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float visibility=pow(envelope,curve);
   float depth=mix(.50,1.,hash(id+vec2(271.8,63.5)+layer*7.));
   float selected=step(.90,hash(id+vec2(307.1,29.4)+layer*41.));
-  float peak=mix(.63,.77,selected);
-  float sparkle=.025+peak*visibility*depth;
+  float peak=mix(.50,.64,selected);
+  float sparkle=.16+peak*visibility*depth;
   float bright=mix(.21,1.48,pow(hash(id+42.8),3.));
   vec3 tint=mix(vec3(.40,.59,.95),vec3(.89,.94,1.),hash(id+19.));
   return tint*(core+halo)*present*bright*sparkle;
@@ -66,7 +67,8 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float dust=pow(folds,1.65)*ribbon;
   float darkLane=smoothstep(.40,.66,fbm(q*8.1+vec2(3.7,t*.0004)));
   vec3 col=vec3(.003,.006,.016);
-  col+=vec3(.026,.086,.24)*dust*(.55+wisps*.8)*(1.-darkLane*.68);
+  col+=vec3(.043,.115,.29)*dust*(.55+wisps*.8)*(1.-darkLane*.68);
+  col+=vec3(.006,.016,.036)*ribbon;
   col+=vec3(.033,.078,.17)*pow(ribbon,3.)*pow(wisps,3.);
   float density=ribbon*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
@@ -77,13 +79,13 @@ window.createGalaxy=function(canvas,initiallyPaused){
   gl_FragColor=vec4(col,1.);
  }`;
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader}
- let program,resolution,clock;
+ let program,resolution,clock,cssShort;
  function setup(){
   program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   gl.useProgram(program);const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
   const position=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
-  resolution=gl.getUniformLocation(program,'resolution');clock=gl.getUniformLocation(program,'clock');
+  resolution=gl.getUniformLocation(program,'resolution');clock=gl.getUniformLocation(program,'clock');cssShort=gl.getUniformLocation(program,'cssShort');
  }
  function size(){
   const w=innerWidth,h=Math.max(innerHeight,document.documentElement.clientHeight),ratio=Math.min(devicePixelRatio||1,1.25,Math.sqrt(950000/(w*h)));
@@ -96,7 +98,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   if(!dirty&&now<nextPaint){if(!paused)frame=requestAnimationFrame(draw);return}
   nextPaint=now+1000/30-1;
   if(last!==null&&!paused)elapsed+=Math.min((now-last)/1000,.08);last=now;
-  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;}
+  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(innerWidth,Math.max(innerHeight,document.documentElement.clientHeight)));gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;}
   if(!paused)frame=requestAnimationFrame(draw);
  }
  function request(){if(!frame&&!lost&&!document.hidden)frame=requestAnimationFrame(draw)}
