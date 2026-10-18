@@ -44,19 +44,28 @@ window.createGalaxy=function(canvas,initiallyPaused){
   return exp(-d*d*.5);
  }
  vec3 stars(vec2 p,float scale,float layer,float density,float t){
-  vec2 grid=p*scale,id=floor(grid),f=fract(grid);
+  // Rotate and gently warp each layer independently so no shared rows survive.
+  vec2 grid=turn(layer*1.137+scene.z*.31)*p*scale;
+  grid+=vec2(sin(p.y*7.13+p.x*3.17+layer),cos(p.x*8.71-p.y*2.43+layer))*1.3;
+  vec2 base=floor(grid);
+  vec3 result=vec3(0.);
+  // Evaluate neighbours so full-cell jitter never clips a star at a tile boundary.
+  for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){
+  vec2 id=base+vec2(float(x),float(y)),f=grid-id;
   float seed=hash(id+layer*17.3);
-  vec2 center=vec2(hash(id+31.7+layer),hash(id+87.1-layer))*.66+.17;
+  float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.28);
+  float present=step(seed,.045+density*.66)*retained;
+  if(present<.5)continue;
+  vec2 center=vec2(hash(id+31.7+layer),hash(id+87.1-layer))*.96+.02;
   // Each particle has its own oscillatory drift: no rigid sheet translation.
   center+=.065*vec2(sin(t*(.045+seed*.055)+seed*41.),cos(t*(.035+seed*.048)+seed*73.));
   float dist=length(f-center);
   float radius=max(mix(.038,.17,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort);
   float aa=scale/min(resolution.x,resolution.y);
+  if(dist>radius+aa*.6)continue;
   float core=1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist);
 
-  // Independent thinning keeps the galactic density profile and twinkle distribution.
-  float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.28);
-  float present=step(seed,.045+density*.66)*retained;
+
   // Most grains remain steady; only a sparse, independently seeded subset twinkles.
   float phase=hash(id+vec2(193.7,81.2)+layer*9.1)*6.2831853;
   // Independent 100–300 second cycles with gradual, individually varied brightness envelopes.
@@ -82,7 +91,9 @@ window.createGalaxy=function(canvas,initiallyPaused){
   // Omit intrinsically faint grains; keep the bright-core group and naturally bright stars.
   // The selection is stable over time, avoiding threshold-driven popping during twinkles.
   float clearStar=max(selected,step(.8,bright));
-  return (tint*core*present*bright*sparkle+pinLight)*clearStar;
+  result+=(tint*core*present*bright*sparkle+pinLight)*clearStar;
+  }
+  return result;
  }
  void main(){
   vec2 p=(gl_FragCoord.xy-.5*resolution)/min(resolution.x,resolution.y);
