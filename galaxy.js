@@ -151,7 +151,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col=mix(col,vec3(1.)-(vec3(1.)-col)*(vec3(1.)-opticalLight),.39);
   // Slightly richer cloud color, preserving luminance and leaving stars untouched.
   float cloudLuma=dot(col,vec3(.2126,.7152,.0722));
-  col=max(mix(vec3(cloudLuma),col,1.10),vec3(0.));
+  col=max(mix(vec3(cloudLuma),col,1.22),vec3(0.));
   float density=pow(ribbon,1.8225)*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
   col+=stars(flow(farP,t*9.2274)+3.71,285.,2.,density,t)*.48;
