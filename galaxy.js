@@ -65,8 +65,8 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float curve=mix(1.4,2.8,hash(id+vec2(73.2,351.6)+layer*11.));
   float visibility=pow(envelope,curve);
   float depth=mix(.50,1.,hash(id+vec2(271.8,63.5)+layer*7.));
-  float selected=step(.84,hash(id+vec2(307.1,29.4)+layer*41.));
-  float peak=mix(.50,.82,selected);
+  float selected=step(.76,hash(id+vec2(307.1,29.4)+layer*41.));
+  float peak=mix(.50,1.02,selected);
   // Gentle independent 5–17 second scintillation above the slow breathing cycle.
   float microPhase=hash(id+vec2(119.4,263.7)+layer*31.1)*6.2831853;
   float microRate=mix(.37,1.26,hash(id+vec2(347.9,54.3)+layer*13.7));
@@ -76,7 +76,9 @@ window.createGalaxy=function(canvas,initiallyPaused){
   sparkle+=.035*microWave*microWave;
   float bright=mix(.21,1.48,pow(hash(id+42.8),3.));
   vec3 tint=mix(vec3(.40,.59,.95),vec3(.89,.94,1.),hash(id+19.));
-  return tint*(core+halo)*present*bright*sparkle;
+  // Brighter stars gain a crisp white-blue core, without amplifying the dusty halo.
+  vec3 pinLight=vec3(.86,.94,1.)*core*present*selected*(.10+.85*visibility)*(.8+.2*microWave);
+  return tint*(core+halo)*present*bright*sparkle+pinLight;
  }
  void main(){
   vec2 p=(gl_FragCoord.xy-.5*resolution)/min(resolution.x,resolution.y);
