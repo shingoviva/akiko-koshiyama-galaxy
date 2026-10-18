@@ -90,6 +90,21 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col+=stars(flow(nearP,t*6.6768)-8.31,420.,3.,density,t)*.32;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
   col+=stars(flow(nearP,t*6.24)+11.73,62.,4.,density*.16,t)*.63;
+  // One isolated glint per ~2–4 minutes. No rapid flickering or simultaneous flashes.
+  float cycle=floor(t/180.);
+  float start=45.+hash(vec2(cycle+23.1,91.7))*60.;
+  float age=mod(t,180.)-start;
+  if(age>0.&&age<3.8){
+   float envelope=smoothstep(0.,1.1,age)*(1.-smoothstep(1.3,3.8,age));
+   vec2 anchor=(vec2(hash(vec2(cycle+61.4,7.9)),hash(vec2(cycle+13.2,83.6)))-.5)*.72;
+   anchor*=resolution/min(resolution.x,resolution.y);
+   vec2 delta=(p-anchor)*cssShort;
+   float distance=length(delta);
+   float core=2.4*exp(-distance*distance/1.3);
+   float bloom=.32*exp(-distance/3.5);
+   float rays=.48*(exp(-abs(delta.x)*2.-abs(delta.y)/5.)+exp(-abs(delta.y)*2.-abs(delta.x)/5.));
+   col+=vec3(.78,.89,1.)*(core+bloom+rays)*envelope;
+  }
   gl_FragColor=vec4(col,1.);
  }`;
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader}
