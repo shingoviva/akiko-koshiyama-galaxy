@@ -66,10 +66,10 @@ window.createGalaxy=function(canvas,initiallyPaused){
  void main(){
   vec2 p=(gl_FragCoord.xy-.5*resolution)/min(resolution.x,resolution.y);
   float t=clock;
-  vec2 farP=p+vec2(0.,camera*.28);
-  vec2 midP=p+vec2(0.,camera*.58);
-  vec2 nearP=p+vec2(0.,camera);
-  vec2 q=flow(midP,t*3.9);
+  vec2 farP=p-vec2(0.,camera*.24);
+  vec2 midP=p-vec2(0.,camera*.65);
+  vec2 nearP=p-vec2(0.,camera*1.12);
+  vec2 q=flow(midP,t*6.24);
   float ribbon=band(q,1.25);
   vec2 cloud=q*3.5+vec2(t*.0008,-t*.0006);
   float folds=fbm(cloud+vec2(noise(cloud*.8+t*.001),noise(cloud*.8+7.1-t*.001)));
@@ -82,10 +82,10 @@ window.createGalaxy=function(canvas,initiallyPaused){
   col+=vec3(.043,.103,.225)*pow(ribbon,3.)*pow(wisps,3.);
   float density=band(q,1.)*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
-  col+=stars(flow(farP,t*3.549)+3.71,285.,2.,density,t)*.48;
-  col+=stars(flow(nearP,t*4.173)-8.31,420.,3.,density,t)*.32;
+  col+=stars(flow(farP,t*5.6784)+3.71,285.,2.,density,t)*.48;
+  col+=stars(flow(nearP,t*6.6768)-8.31,420.,3.,density,t)*.32;
   // Rare brighter grains remain round, with restrained bloom and no diffraction lines.
-  col+=stars(flow(nearP,t*3.9)+11.73,62.,4.,density*.16,t)*.63;
+  col+=stars(flow(nearP,t*6.24)+11.73,62.,4.,density*.16,t)*.63;
   gl_FragColor=vec4(col,1.);
  }`;
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader}
@@ -114,7 +114,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   nextPaint=now+1000/30-1;
   const delta=last===null?0:Math.min((now-last)/1000,.1);last=now;
   if(!paused){elapsed+=delta;scrollPosition+=(scrollTarget-scrollPosition)*(1.-Math.exp(-delta/.65));}
-  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(viewWidth,viewHeight));gl.uniform1f(cameraUniform,22.*Math.tanh(scrollPosition/2200.)/Math.min(viewWidth,viewHeight));gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;reveal(canvas);}
+  if(!paused||dirty){size();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(resolution,canvas.width,canvas.height);gl.uniform1f(clock,elapsed);gl.uniform1f(cssShort,Math.min(viewWidth,viewHeight));gl.uniform1f(cameraUniform,140.*Math.tanh(scrollPosition/3600.)/Math.min(viewWidth,viewHeight));gl.drawArrays(gl.TRIANGLES,0,6);dirty=false;reveal(canvas);}
   if(!paused)frame=requestAnimationFrame(draw);
  }
  function request(){if(!frame&&!lost&&!document.hidden)frame=requestAnimationFrame(draw)}
