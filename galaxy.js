@@ -41,12 +41,16 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float present=step(seed,.025+density*.66)*retained;
   // Most grains remain steady; only a sparse, independently seeded subset twinkles.
   float phase=hash(id+vec2(193.7,81.2)+layer*9.1)*6.2831853;
-  // Independent 50–150 second cycles, with long dim intervals and soft appearances.
-  float rate=mix(.042,.126,hash(id+vec2(51.8,217.3)+layer*23.));
+  // Independent 100–300 second cycles with gradual, individually varied brightness envelopes.
+  float rate=mix(.021,.063,hash(id+vec2(51.8,217.3)+layer*23.));
   float wave=.5+.5*sin(t*rate+phase);
-  float visibility=smoothstep(.60,.96,wave);
+  float envelope=smoothstep(0.,1.,wave);
+  float curve=mix(1.4,2.8,hash(id+vec2(73.2,351.6)+layer*11.));
+  float visibility=pow(envelope,curve);
+  float depth=mix(.50,1.,hash(id+vec2(271.8,63.5)+layer*7.));
   float selected=step(.90,hash(id+vec2(307.1,29.4)+layer*41.));
-  float sparkle=mix(.025+.61*visibility,.045+.73*visibility,selected);
+  float peak=mix(.63,.77,selected);
+  float sparkle=.025+peak*visibility*depth;
   float bright=mix(.21,1.48,pow(hash(id+42.8),3.));
   vec3 tint=mix(vec3(.40,.59,.95),vec3(.89,.94,1.),hash(id+19.));
   return tint*(core+halo)*present*bright*sparkle;
