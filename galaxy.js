@@ -16,7 +16,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
  uniform vec3 scene;
  uniform float camera;
  uniform vec4 wanderers[5];
- float hash(vec2 p){return fract(sin(dot(p+scene.xy,vec2(127.1,311.7)))*43758.5453);}
+ float hash(vec2 p){vec3 h=fract(vec3(p.x,p.y,p.x)*.1031+scene.xyx*.013);h+=dot(h,h.yzx+33.33);return fract((h.x+h.y)*h.z);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=mat2(.8,-.6,.6,.8)*p*2.03+3.71;a*=.5;}return v;}
  mat2 turn(float a){return mat2(cos(a),-sin(a),sin(a),cos(a));}
@@ -113,36 +113,42 @@ window.createGalaxy=function(canvas,initiallyPaused){
   vec2 nearP=p-vec2(0.,camera*1.12);
   vec2 q=flow(midP,t*10.14);
   float ribbon=band(q,1.35);
-  vec2 cloud=q*3.5+vec2(t*.00019,-t*.00014);
-  // Large gas masses, finer turbulent folds, narrow filaments, and absorbing dust.
-  // All coordinates remain normalized: no large pixel-distance squares or new light loops.
-  vec2 warp=vec2(noise(cloud*.65+t*.00025),noise(cloud*.65+7.1-t*.00025))-.5;
-  vec2 domain=cloud+warp*.95;
-  float bulk=fbm(domain*.72);
-  float medium=fbm(domain*2.1+vec2(13.1,7.7));
-  float detail=noise(domain*10.7+vec2(t*.00028,0.));
-  float folds=clamp(bulk*.64+medium*.36,0.,1.);
-  float filamentField=noise(domain*vec2(4.8,2.3)+detail*.6);
-  float filaments=pow(clamp(1.-abs(2.*filamentField-1.),0.,1.),5.)*smoothstep(.3,.7,bulk);
-  float wisps=clamp(smoothstep(.3,.84,medium)*(.6+detail*.4)+filaments*.25,0.,1.);
-  float mass=smoothstep(.18,.74,folds);
-  float dust=pow(max(mass,0.),1.7)*ribbon;
-  float darkLane=smoothstep(.43,.70,noise(domain*vec2(3.2,5.7)+37.2)+.12*(detail-.5));
+  vec2 cloud=q*4.6+vec2(t*.00019,-t*.00014);
+  // Hierarchical gas masses and cavities, rather than stretched luminous ribbons.
+  // Normalized coordinates keep all field operations bounded on mobile GPUs.
+  vec2 warp=vec2(fbm(cloud*.62+t*.00025),fbm(cloud*.62+7.1-t*.00025))-.4375;
+  vec2 domain=cloud+warp*.65;
+  float bulk=fbm(domain*.74);
+  float medium=fbm(domain*2.6+vec2(13.1,7.7));
+  float detail=fbm(domain*8.2+vec2(t*.00028,0.));
+  float folds=clamp(bulk*.56+medium*.29+detail*.15,0.,1.);
+  // Soft coverage biases the composition without forcing gas into a single band.
+  ribbon=mix(.38,1.,ribbon);
+  float mass=smoothstep(.22,.65,folds);
+  float dust=pow(mass,1.45)*ribbon;
+  float vein=fbm(domain*1.8+vec2(31.7,19.2));
+  float ridge=abs(vein-.43);
+  float darkLane=smoothstep(.44,.61,vein+medium*.17-detail*.12)*.86;
+  float cavity=smoothstep(.49,.66,bulk)*(1.-smoothstep(.30,.44,medium));
+  darkLane=max(darkLane,cavity*.82);
+  float edge=(1.-smoothstep(.025,.13,ridge))*(.35+detail*.65);
+  float filaments=edge*(.28+detail*.9)*smoothstep(.25,.55,folds);
+  float wisps=clamp(medium*.65+detail*.55+filaments*.3,0.,1.);
   float violet=smoothstep(.27,.61,noise(cloud*.53+vec2(17.3,scene.z*4.)))*.82;
   vec3 cloudTint=mix(vec3(.051,.138,.35),vec3(.25,.075,.39),violet*.9);
   vec3 col=vec3(.002,.004,.010);
   col+=vec3(.002,.005,.011)*(.45+folds*.55);
-  col+=cloudTint*dust*(.55+wisps*.8)*(1.-darkLane*.68);
+  col+=cloudTint*dust*(.4+wisps*.9)*(1.-darkLane*.88);
   col+=vec3(.006,.016,.036)*ribbon;
   col+=vec3(.043,.103,.225)*pow(ribbon,3.)*pow(wisps,3.);
-  col+=vec3(.025,.065,.13)*filaments*ribbon*(1.-darkLane*.85);
+  col+=vec3(.045,.105,.22)*filaments*ribbon*(1.-darkLane*.85);
   // Dark sky with localized luminous blue/violet screen-blended cloud highlights.
   float opticalMask=pow(ribbon,1.8)*pow(folds,.9)*(.55+wisps*.45)*(1.-darkLane*.8);
   col*=.72;
-  float hot=smoothstep(.49,.72,folds)*pow(ribbon,1.5)*(1.-darkLane*.7);
+  float hot=(smoothstep(.47,.67,folds)*(.65+detail*.6)+filaments*.18)*pow(ribbon,1.5)*(1.-darkLane*.88);
   vec3 opticalTint=mix(vec3(.16,.3,.52),vec3(.52,.19,.68),violet);
-  vec3 opticalLight=clamp(opticalTint*opticalMask*.82+mix(vec3(.48,.65,1.),vec3(.8,.38,1.),violet)*hot*1.65,0.,1.);
-  col=mix(col,vec3(1.)-(vec3(1.)-col)*(vec3(1.)-opticalLight),.34);
+  vec3 opticalLight=clamp(opticalTint*opticalMask*.82+mix(vec3(.48,.65,1.),vec3(.8,.38,1.),violet)*hot*2.05,0.,1.);
+  col=mix(col,vec3(1.)-(vec3(1.)-col)*(vec3(1.)-opticalLight),.39);
   float density=pow(ribbon,1.8225)*(.28+folds*.75)*(1.-darkLane*.45);
   col+=stars(q,175.,1.,density,t)*.69;
   col+=stars(flow(farP,t*9.2274)+3.71,285.,2.,density,t)*.48;
