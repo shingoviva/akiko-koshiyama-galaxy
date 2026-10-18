@@ -151,12 +151,12 @@ window.createGalaxy=function(canvas,initiallyPaused){
  }`;
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader}
  const wandererData=new Float32Array(20);
- const wandererSeeds=Array.from({length:5},()=>({phase:Math.random()*Math.PI*2,rate:.75+Math.random()*.5,radius:.38+Math.random()*.16,light:.45+Math.random()*.25}));
+ const wandererSeeds=Array.from({length:5},()=>({phase:Math.random()*Math.PI*2,rate:.75+Math.random()*.5,radius:.38+Math.random()*.16,light:.72+Math.random()*.18}));
  let program,resolution,clock,cssShort,sceneUniform,cameraUniform,wandererUniform;
  function updateWanderers(){
   const short=Math.min(viewWidth,viewHeight);
   wandererSeeds.forEach((s,i)=>{
-   const t=elapsed*s.rate;
+   const t=elapsed*s.rate*6.;
    wandererData[i*4]=(.35*Math.sin(t*.00035+s.phase)+.055*Math.sin(t*.00081+s.phase*2.17))*viewWidth/short;
    wandererData[i*4+1]=(.35*Math.cos(t*.00029+s.phase*1.37)+.055*Math.sin(t*.00067+s.phase*3.11))*viewHeight/short;
    wandererData[i*4+2]=s.radius;
