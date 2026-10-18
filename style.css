@@ -68,3 +68,7 @@ body{isolation:isolate}#cosmos{z-index:-1;background:#000;width:100%;height:100%
 /* Keep black until the first rendered galaxy frame, then blend into the scene. */
 html{background:#000}#cosmos{opacity:0;transition:opacity 2.4s cubic-bezier(.22,1,.36,1)}#cosmos.galaxy-ready{opacity:1}
 @media(prefers-reduced-motion:reduce){#cosmos{transition:none}}
+
+/* Independent optical stars, behind content and synchronized with the galaxy entrance. */
+#starlight{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity 2.4s cubic-bezier(.22,1,.36,1)}#starlight.starlight-ready{opacity:1}
+@media(prefers-reduced-motion:reduce){#starlight{transition:none}}

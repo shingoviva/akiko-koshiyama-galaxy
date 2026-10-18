@@ -119,9 +119,10 @@ let viewerClosing=false;function closeViewer(){if(viewerClosing||!dialog.open)re
 const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target)}}),{threshold:.07}):null;document.querySelectorAll('.reveal').forEach(e=>observer?observer.observe(e):e.classList.add('visible'));
 let paused=uiMotion.matches;
 const galaxy=window.createGalaxy(document.querySelector('#cosmos'),paused);
+const starlight=window.createStarlight(paused);
 const art=document.querySelector('#hero-art');
 addEventListener('pointermove',e=>{if(e.pointerType==='touch'||paused)return;const px=e.clientX/innerWidth-.5,py=e.clientY/innerHeight-.5;art.style.transform=`perspective(1100px) rotateY(${px*9}deg) rotateX(${-py*6}deg) translate3d(${px*8}px,${py*8}px,0)`});
-function updateMotionLabel(){document.querySelector('#motion').innerHTML=icon(paused?'play':'pause');document.querySelector('#motion').ariaLabel=english?(paused?'Resume animation':'Pause animation'):(paused?'アニメーションを再開':'アニメーションを停止');galaxy.setPaused(paused)};document.querySelector('#motion').onclick=()=>{paused=!paused;updateMotionLabel();if(paused)art.style.transform='none';animateUI(document.querySelector('#motion'),[{opacity:.25},{opacity:1}],{duration:220})};updateMotionLabel();
+function updateMotionLabel(){document.querySelector('#motion').innerHTML=icon(paused?'play':'pause');document.querySelector('#motion').ariaLabel=english?(paused?'Resume animation':'Pause animation'):(paused?'アニメーションを再開':'アニメーションを停止');galaxy.setPaused(paused);starlight.setPaused(paused)};document.querySelector('#motion').onclick=()=>{paused=!paused;updateMotionLabel();if(paused)art.style.transform='none';animateUI(document.querySelector('#motion'),[{opacity:.25},{opacity:1}],{duration:220})};updateMotionLabel();
 
 // Touch gestures preserve normal vertical page scrolling.
 let swipeStart=null,swipeOffset=0;
