@@ -56,7 +56,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){
   vec2 id=base+vec2(float(x),float(y)),f=grid-id;
   float seed=hash(id+layer*17.3);
-  float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.22);
+  float retained=step(hash(id+vec2(419.3,157.9)+layer*53.7),.20);
   float present=step(seed,.025+density*.66)*retained;
   if(present<.5)continue;
   vec2 center=vec2(hash(id+31.7+layer),hash(id+87.1-layer))*.96+.02;
@@ -64,7 +64,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   center+=.065*vec2(sin(t*(.045+seed*.055)+seed*41.),cos(t*(.035+seed*.048)+seed*73.));
   float dist=length(f-center);
   float selected=step(.76,hash(id+vec2(307.1,29.4)+layer*41.));
-  float radius=max(mix(.038,.17,pow(hash(id+layer+12.3),2.6)),.35*scale/cssShort)*mix(.72,1.,selected);
+  float radius=max(mix(.038,.15,pow(hash(id+layer+12.3),2.6)),.32*scale/cssShort)*mix(.72,1.,selected);
   float aa=scale/min(resolution.x,resolution.y);
   float jewel=step(3.5,layer)*selected;
   if(dist>max(radius+aa*.6,jewel*scale/cssShort*3.))continue;
@@ -231,11 +231,11 @@ window.createGalaxy=function(canvas,initiallyPaused){
   if(!paused)frame=requestAnimationFrame(draw);
  }
  function request(){if(!frame&&!lost&&!document.hidden)frame=requestAnimationFrame(draw)}
- // Static Canvas fallback retains dense, blue galactic structure if WebGL is unavailable.
+ // Static Canvas fallback retains sparse silver galactic structure if WebGL is unavailable.
  if(!gl){
   const replacement=document.createElement('canvas');replacement.id=canvas.id;replacement.setAttribute('aria-hidden','true');canvas.replaceWith(replacement);
   const ctx=replacement.getContext('2d');
-  function fallback(){const w=innerWidth,h=innerHeight,d=Math.min(devicePixelRatio||1,1.5);replacement.width=w*d;replacement.height=h*d;ctx.scale(d,d);ctx.fillStyle='#02040b';ctx.fillRect(0,0,w,h);let seed=1+Math.floor(scene[0]*1000000);function random(){seed=(seed*16807)%2147483647;return seed/2147483647}for(let i=0;i<26000;i++){const x=random()*w,y=random()*h,u=(x-w*.5)/Math.min(w,h),v=(y-h*.5)/Math.min(w,h),b=Math.exp(-Math.pow((v-.3*u-.18*Math.sin(u*2))/.17,2));if(random()>.025+b*.7)continue;ctx.fillStyle=`rgba(145,181,244,${.12+random()*.6})`;const r=.25+Math.pow(random(),5)*.8;ctx.fillRect(x,y,r,r)}}
+  function fallback(){const w=innerWidth,h=innerHeight,d=Math.min(devicePixelRatio||1,1.5);replacement.width=w*d;replacement.height=h*d;ctx.scale(d,d);ctx.fillStyle='#000000';ctx.fillRect(0,0,w,h);let seed=1+Math.floor(scene[0]*1000000);function random(){seed=(seed*16807)%2147483647;return seed/2147483647}for(let i=0;i<10000;i++){const x=random()*w,y=random()*h,u=(x-w*.5)/Math.min(w,h),v=(y-h*.5)/Math.min(w,h),b=Math.exp(-Math.pow((v-.3*u-.18*Math.sin(u*2))/.17,2));if(random()>.025+b*.7)continue;ctx.fillStyle=`rgba(209,216,226,${.12+random()*.6})`;const r=.22+Math.pow(random(),5)*.56;ctx.fillRect(x,y,r,r)}}
   fallback();reveal(replacement);addEventListener('resize',fallback,{passive:true});return{setPaused(){},renderer:'canvas-static'};
  }
  addEventListener('scroll',()=>{scrollTarget=Math.max(0,scrollY)},{passive:true});

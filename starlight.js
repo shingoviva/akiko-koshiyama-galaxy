@@ -17,8 +17,8 @@ window.createStarlight=function(initiallyPaused){
  for(let i=0;i<8;i++)stars.push({x:.07+Math.random()*.86,y:.12+Math.random()*.78,strong:false,phase:Math.random()*Math.PI*2,rate:.7+Math.random()*.65});
  function size(){const nw=innerWidth;if(coarse&&w===nw)return;w=nw;h=coarse?Math.max(innerHeight,screen.height):innerHeight;const ratio=Math.min(devicePixelRatio||1,1.25,Math.sqrt(950000/(w*h)));canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(ratio,0,0,ratio,0,0);rects=[]}
  function draw(now){frame=0;if(document.hidden)return;if(now<next){if(!paused)frame=requestAnimationFrame(draw);return}next=now+1000/30-1;const dt=last===null?0:Math.min((now-last)/1000,.1);last=now;if(!paused){clock+=dt;offset+=(Math.max(0,scrollY)*.006-offset)*(1-Math.exp(-dt/.65))}
-  for(const r of rects)ctx.clearRect(r.x,r.y,r.size,r.size);rects=[];
-  for(const s of stars){const wave=.5+.5*Math.sin(clock*s.rate+s.phase),pulse=Math.pow(wave,s.strong?3:4),extent=s.strong?18+13*pulse:10+5*pulse;const x=s.x*w,y=s.y*h-offset;ctx.globalAlpha=s.strong?.32+.68*pulse:.07+.38*pulse;ctx.drawImage(s.strong?large:small,x-extent/2,y-extent/2,extent,extent);rects.push({x:x-extent/2-2,y:y-extent/2-2,size:extent+4})}ctx.globalAlpha=1;if(!paused)frame=requestAnimationFrame(draw);
+  for(const r of rects)ctx.clearRect(r.x,r.y,r.size,r.size);
+  for(let i=0;i<stars.length;i++){const s=stars[i];const wave=.5+.5*Math.sin(clock*s.rate+s.phase),pulse=Math.pow(wave,s.strong?3:4),extent=s.strong?16+11*pulse:10+5*pulse;const x=s.x*w,y=s.y*h-offset;ctx.globalAlpha=s.strong?.32+.68*pulse:.07+.38*pulse;ctx.drawImage(s.strong?large:small,x-extent/2,y-extent/2,extent,extent);const r=rects[i]||(rects[i]={});r.x=x-extent/2-2;r.y=y-extent/2-2;r.size=extent+4}ctx.globalAlpha=1;if(!paused)frame=requestAnimationFrame(draw);
  }
  function request(){if(!frame&&!document.hidden)frame=requestAnimationFrame(draw)}
  function reveal(){if(base.classList.contains('galaxy-ready')){canvas.classList.add('starlight-ready');observer.disconnect()}}
