@@ -70,8 +70,11 @@ window.createGalaxy=function(canvas,initiallyPaused){
   float radius=max(mix(.038,.15,pow(hash(id+layer+12.3),2.6)),.32*scale/cssShort)*mix(.72,1.,selected);
   float aa=scale/min(resolution.x,resolution.y);
   float jewel=step(3.5,layer)*selected;
-  if(dist>max(radius+aa*.6,jewel*scale/cssShort*3.))continue;
-  float core=1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist);
+  if(dist>max(radius+aa*1.6,jewel*scale/cssShort*3.))continue;
+  // Pixel-footprint filtering limits subpixel shimmer as the background moves.
+  float variance=radius*radius+aa*aa*.7;
+  float filteredCore=exp(-2.*dist*dist/variance)*radius*radius/variance;
+  float core=mix(1.-smoothstep(max(0.,radius-aa*.6),radius+aa*.6,dist),filteredCore,mix(.55,.25,selected));
 
 
   // Most grains remain steady; only a sparse, independently seeded subset twinkles.
@@ -182,9 +185,9 @@ window.createGalaxy=function(canvas,initiallyPaused){
    anchor*=resolution/min(resolution.x,resolution.y);
    vec2 delta=(p-anchor)*cssShort;
    float distance=length(delta);
-   float core=2.4*exp(-distance*distance/1.05);
-   float bloom=.32*exp(-distance/3.1);
-   float rays=.48*(exp(-abs(delta.x)*2.-abs(delta.y)/4.5)+exp(-abs(delta.y)*2.-abs(delta.x)/4.5));
+   float core=1.75*exp(-distance*distance/1.05);
+   float bloom=.22*exp(-distance/3.1);
+   float rays=.30*(exp(-abs(delta.x)*2.-abs(delta.y)/4.5)+exp(-abs(delta.y)*2.-abs(delta.x)/4.5));
    col+=vec3(.78,.89,1.)*(core+bloom+rays)*envelope;
   }
   // A restrained contrast curve deepens the dark sky while preserving luminous cores.
