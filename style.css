@@ -84,3 +84,5 @@ dialog{max-height:92vh;max-height:92svh}
  .viewer-nav button{min-width:44px;min-height:44px}
  .viewer-copy,.body-copy,.inquiry-rates dt{overflow-wrap:anywhere}
 }
+
+#meteors{position:fixed;inset:0;pointer-events:none;z-index:-1;width:100%;height:100%}

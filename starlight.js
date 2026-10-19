@@ -26,5 +26,28 @@ window.createStarlight=function(initiallyPaused){
  function reveal(){if(base.classList.contains('galaxy-ready')){canvas.classList.add('starlight-ready');observer.disconnect()}}
  const observer=new MutationObserver(reveal);observer.observe(base,{attributes:true,attributeFilter:['class']});reveal();size();request();
  addEventListener('resize',()=>{size();next=0;request()},{passive:true});document.addEventListener('visibilitychange',()=>{last=null;if(document.hidden){cancelAnimationFrame(frame);frame=0}else request()});
+ // Deliberate upper-left triple tap: independent, event-driven meteor canvas.
+ const meteorCanvas=document.createElement('canvas');meteorCanvas.id='meteors';meteorCanvas.setAttribute('aria-hidden','true');canvas.after(meteorCanvas);
+ const meteorCtx=meteorCanvas.getContext('2d',{alpha:true});
+ if(meteorCtx){
+  let meteorFrame=0,meteorLast=null,meteors=[],tapCount=0,tapLast=0,down=null,mw=0,mh=0;
+  const limit=constrained?48:96;
+  function meteorSize(){mw=innerWidth;mh=innerHeight;const d=Math.min(devicePixelRatio||1,maxDpr,Math.sqrt(pixelBudget/(mw*mh)));meteorCanvas.width=Math.round(mw*d);meteorCanvas.height=Math.round(mh*d);meteorCanvas.style.width=mw+'px';meteorCanvas.style.height=mh+'px';meteorCtx.setTransform(d,0,0,d,0,0)}
+  const streak=document.createElement('canvas');streak.width=256;streak.height=20;
+  const brush=streak.getContext('2d');
+  const trail=brush.createLinearGradient(0,0,256,0);trail.addColorStop(0,'rgba(242,249,255,1)');trail.addColorStop(.09,'rgba(220,234,255,.8)');trail.addColorStop(.5,'rgba(200,220,255,.22)');trail.addColorStop(1,'rgba(200,220,255,0)');brush.fillStyle=trail;brush.beginPath();brush.moveTo(0,10);brush.lineTo(256,9);brush.lineTo(256,11);brush.closePath();brush.fill();
+
+  function meteorDraw(now){meteorFrame=0;if(document.hidden)return;const dt=meteorLast===null?0:Math.min((now-meteorLast)/1000,.06);meteorLast=now;meteorCtx.clearRect(0,0,mw,mh);
+   for(let i=meteors.length-1;i>=0;i--){const m=meteors[i];m.age+=dt;m.x-=m.speed*dt;m.y-=m.speed*m.slope*dt;const fade=Math.min(1,m.age/.06)*Math.min(1,(m.life-m.age)/.18);if(m.age>=m.life||m.x+m.tail<0){meteors.splice(i,1);continue}meteorCtx.save();meteorCtx.globalAlpha=Math.max(0,fade)*m.light;meteorCtx.translate(m.x,m.y);meteorCtx.rotate(Math.atan(m.slope));meteorCtx.drawImage(streak,0,-m.width*2,m.tail,m.width*4);meteorCtx.drawImage(small,-m.width*4,-m.width*4,m.width*8,m.width*8);meteorCtx.restore();}
+   if(meteors.length)meteorFrame=requestAnimationFrame(meteorDraw);else meteorLast=null;
+  }
+  function launch(count){if(!mw)meteorSize();for(let i=0;i<count;i++){if(meteors.length>=limit)meteors.shift();meteors.push({x:mw*(.78+Math.random()*.35),y:mh*(.13+Math.random()*.40),speed:mw*(1.45+Math.random()*1.2),slope:.04+Math.random()*.18,tail:mw*(.16+Math.random()*.38),width:.7+Math.random()*1.5,life:.65+Math.random()*.4,age:0,light:.6+Math.random()*.4})}if(!meteorFrame){meteorLast=null;meteorFrame=requestAnimationFrame(meteorDraw)}}
+  function inZone(e){return e.clientX>=0&&e.clientX<=Math.min(140,innerWidth*.26)&&e.clientY>=110&&e.clientY<=Math.min(230,innerHeight*.36)&&!e.target.closest('a,button,input,select,textarea,summary,dialog')}
+  addEventListener('pointerdown',e=>{down=e.isPrimary&&inZone(e)?{x:e.clientX,y:e.clientY,time:performance.now(),id:e.pointerId}:null},{passive:true});
+  addEventListener('pointerup',e=>{const now=performance.now();if(!down||e.pointerId!==down.id||!inZone(e)||now-down.time>400||Math.hypot(e.clientX-down.x,e.clientY-down.y)>12){down=null;tapCount=0;return}down=null;tapCount=now-tapLast<450?tapCount+1:1;tapLast=now;if(tapCount>=3)launch(Math.min(6,tapCount-2))},{passive:true});
+  addEventListener('pointercancel',()=>{down=null;tapCount=0},{passive:true});
+  addEventListener('resize',()=>{if(mw){meteors=[];cancelAnimationFrame(meteorFrame);meteorFrame=0;meteorLast=null;meteorSize()}},{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){meteors=[];tapCount=0;down=null;cancelAnimationFrame(meteorFrame);meteorFrame=0;meteorLast=null;meteorCtx.clearRect(0,0,mw,mh)}});
+ }
  return{setPaused(value){paused=value;last=null;next=0;request()},renderer:'canvas2d'};
 };
