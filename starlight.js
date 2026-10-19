@@ -33,17 +33,22 @@ window.createStarlight=function(initiallyPaused){
   let meteorFrame=0,meteorLast=null,meteors=[],tapCount=0,tapLast=0,down=null,mw=0,mh=0;
   const limit=constrained?48:96;
   function meteorSize(){mw=innerWidth;mh=innerHeight;const d=Math.min(devicePixelRatio||1,maxDpr,Math.sqrt(pixelBudget/(mw*mh)));meteorCanvas.width=Math.round(mw*d);meteorCanvas.height=Math.round(mh*d);meteorCanvas.style.width=mw+'px';meteorCanvas.style.height=mh+'px';meteorCtx.setTransform(d,0,0,d,0,0)}
-  const streak=document.createElement('canvas');streak.width=512;streak.height=64;
+  const streak=document.createElement('canvas');streak.width=1024;streak.height=64;
   const brush=streak.getContext('2d');
   // Cached high-resolution tapered emission: a narrow white core and soft cool wake.
-  const trail=brush.createLinearGradient(0,0,512,0);trail.addColorStop(0,'rgba(250,252,255,.96)');trail.addColorStop(.06,'rgba(232,243,255,.72)');trail.addColorStop(.25,'rgba(204,222,246,.34)');trail.addColorStop(.65,'rgba(184,207,236,.08)');trail.addColorStop(1,'rgba(184,207,236,0)');
-  brush.fillStyle=trail;brush.shadowColor='rgba(196,219,249,.55)';brush.shadowBlur=7;brush.beginPath();brush.moveTo(0,29.5);brush.lineTo(512,32);brush.lineTo(0,34.5);brush.closePath();brush.fill();brush.shadowBlur=0;brush.globalAlpha=.65;brush.beginPath();brush.moveTo(0,31.2);brush.lineTo(420,32);brush.lineTo(0,32.8);brush.closePath();brush.fill();
+  const trail=brush.createLinearGradient(0,0,1024,0);trail.addColorStop(0,'rgba(250,252,255,.96)');trail.addColorStop(.06,'rgba(232,243,255,.72)');trail.addColorStop(.25,'rgba(204,222,246,.34)');trail.addColorStop(.65,'rgba(184,207,236,.08)');trail.addColorStop(1,'rgba(184,207,236,0)');
+  brush.fillStyle=trail;brush.shadowColor='rgba(196,219,249,.55)';brush.shadowBlur=7;brush.beginPath();brush.moveTo(0,29.5);brush.lineTo(1024,32);brush.lineTo(0,34.5);brush.closePath();brush.fill();brush.shadowBlur=0;brush.globalAlpha=.65;brush.beginPath();brush.moveTo(0,31.2);brush.lineTo(840,32);brush.lineTo(0,32.8);brush.closePath();brush.fill();
 
   function meteorDraw(now){meteorFrame=0;if(document.hidden)return;const dt=meteorLast===null?0:Math.min((now-meteorLast)/1000,.06);meteorLast=now;meteorCtx.clearRect(0,0,mw,mh);
-   for(let i=meteors.length-1;i>=0;i--){const m=meteors[i];m.age+=dt;m.x-=m.speed*dt;m.y+=m.speed*m.slope*dt;const fade=Math.min(1,m.age/.06)*Math.min(1,(m.life-m.age)/.18);if(m.age>=m.life||m.x+m.tail<0){meteors.splice(i,1);continue}meteorCtx.save();meteorCtx.globalAlpha=Math.max(0,fade)*m.light;meteorCtx.translate(m.x,m.y);meteorCtx.rotate(-Math.atan(m.slope));meteorCtx.drawImage(streak,0,-m.width*4,m.tail,m.width*8);meteorCtx.drawImage(small,-m.width*3,-m.width*3,m.width*6,m.width*6);meteorCtx.restore();}
+   for(let i=meteors.length-1;i>=0;i--){const m=meteors[i];m.age+=dt;m.x-=m.speed*dt;m.y+=m.speed*m.slope*dt;const fade=Math.min(1,m.age/.06)*Math.min(1,(m.life-m.age)/.18);if(m.age>=m.life||m.x+m.tail<0){meteors.splice(i,1);continue}meteorCtx.save();meteorCtx.translate(m.x,m.y);meteorCtx.rotate(-Math.atan(m.slope));
+    // Short shutter integration joins fast frame-to-frame motion without leaving stale pixels.
+    const exposure=Math.min(dt*.75,.024),travel=m.speed*Math.sqrt(1+m.slope*m.slope)*exposure,samples=constrained?2:3,alpha=Math.max(0,fade)*m.light;
+    meteorCtx.imageSmoothingEnabled=true;meteorCtx.imageSmoothingQuality='high';
+    for(let j=0;j<samples;j++){meteorCtx.globalAlpha=alpha/samples;meteorCtx.drawImage(streak,travel*j/(samples-1),-m.width*4,m.tail,m.width*8)}
+    meteorCtx.globalAlpha=alpha*.8;meteorCtx.drawImage(small,-m.width*3,-m.width*3,m.width*6+travel,m.width*6);meteorCtx.restore();}
    if(meteors.length)meteorFrame=requestAnimationFrame(meteorDraw);else meteorLast=null;
   }
-  function launch(count){if(!mw)meteorSize();for(let i=0;i<count;i++){if(meteors.length>=limit)meteors.shift();meteors.push({x:mw*(.78+Math.random()*.35),y:mh*(-.03+Math.random()*.25),speed:mw*(1.45+Math.random()*1.2),slope:.58+Math.random()*.45,tail:mw*(.16+Math.random()*.38),width:.65+Math.random()*1.15,life:.65+Math.random()*.4,age:0,light:.6+Math.random()*.4})}if(!meteorFrame){meteorLast=null;meteorFrame=requestAnimationFrame(meteorDraw)}}
+  function launch(count){if(!mw)meteorSize();for(let i=0;i<count;i++){if(meteors.length>=limit)meteors.shift();meteors.push({x:mw*(.78+Math.random()*.35),y:mh*(-.03+Math.random()*.25),speed:mw*(1.45+Math.random()*1.2),slope:.58+Math.random()*.45,tail:mw*(.36+Math.random()*.64),width:.65+Math.random()*1.15,life:.65+Math.random()*.4,age:0,light:.6+Math.random()*.4})}if(!meteorFrame){meteorLast=null;meteorFrame=requestAnimationFrame(meteorDraw)}}
   function inZone(e){return e.clientX>=0&&e.clientX<=Math.min(140,innerWidth*.26)&&e.clientY>=110&&e.clientY<=Math.min(230,innerHeight*.36)&&!e.target.closest('a,button,input,select,textarea,summary,dialog')}
   addEventListener('pointerdown',e=>{down=e.isPrimary&&inZone(e)?{x:e.clientX,y:e.clientY,time:performance.now(),id:e.pointerId}:null},{passive:true});
   addEventListener('pointerup',e=>{const now=performance.now();if(!down||e.pointerId!==down.id||!inZone(e)||now-down.time>400||Math.hypot(e.clientX-down.x,e.clientY-down.y)>12){down=null;tapCount=0;return}down=null;tapCount=now-tapLast<450?tapCount+1:1;tapLast=now;if(tapCount>=3)launch(Math.min(6,tapCount-2))},{passive:true});
