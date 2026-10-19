@@ -1,7 +1,10 @@
 /* Continuous procedural galaxy. Identical scene and shader on every device. */
 window.createGalaxy=function(canvas,initiallyPaused){
  'use strict';
- const gl=canvas.getContext('webgl',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'low-power'});
+ let gl=canvas.getContext('webgl',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'low-power'});
+ const constrained=(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)||(navigator.deviceMemory&&navigator.deviceMemory<=4);
+ const pixelBudget=constrained?480000:950000,maxDpr=constrained?1:1.25;
+ if(gl&&!gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT)?.precision)gl=null;
  let paused=initiallyPaused,elapsed=0,last=null,frame=0,dirty=true,lost=false,nextPaint=0;
  const scene=new Float32Array([Math.random()*71,Math.random()*71,Math.random()]);
  let scrollTarget=scrollY,scrollPosition=scrollY,viewWidth=0,viewHeight=0;
@@ -216,7 +219,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   if(stableViewport&&viewWidth===w)return;
   const h=stableViewport?Math.max(innerHeight,screen.height):Math.max(innerHeight,document.documentElement.clientHeight);
   viewWidth=w;viewHeight=h;canvas.style.width=w+'px';canvas.style.height=h+'px';
-  const ratio=Math.min(devicePixelRatio||1,1.25,Math.sqrt(950000/(w*h)));
+  const ratio=Math.min(devicePixelRatio||1,maxDpr,Math.sqrt(pixelBudget/(w*h)));
   const width=Math.round(w*ratio),height=Math.round(h*ratio);
   if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;dirty=true}
  }
@@ -232,14 +235,18 @@ window.createGalaxy=function(canvas,initiallyPaused){
  }
  function request(){if(!frame&&!lost&&!document.hidden)frame=requestAnimationFrame(draw)}
  // Static Canvas fallback retains sparse silver galactic structure if WebGL is unavailable.
- if(!gl){
+ function fallbackRenderer(){
   const replacement=document.createElement('canvas');replacement.id=canvas.id;replacement.setAttribute('aria-hidden','true');canvas.replaceWith(replacement);
   const ctx=replacement.getContext('2d');
-  function fallback(){const w=innerWidth,h=innerHeight,d=Math.min(devicePixelRatio||1,1.5);replacement.width=w*d;replacement.height=h*d;ctx.scale(d,d);ctx.fillStyle='#000000';ctx.fillRect(0,0,w,h);let seed=1+Math.floor(scene[0]*1000000);function random(){seed=(seed*16807)%2147483647;return seed/2147483647}for(let i=0;i<10000;i++){const x=random()*w,y=random()*h,u=(x-w*.5)/Math.min(w,h),v=(y-h*.5)/Math.min(w,h),b=Math.exp(-Math.pow((v-.3*u-.18*Math.sin(u*2))/.17,2));if(random()>.025+b*.7)continue;ctx.fillStyle=`rgba(209,216,226,${.12+random()*.6})`;const r=.22+Math.pow(random(),5)*.56;ctx.fillRect(x,y,r,r)}}
+  if(!ctx){reveal(replacement);return{setPaused(){},renderer:'none'}}
+  let fallbackWidth=0;
+  function fallback(){const w=innerWidth;if(stableViewport&&fallbackWidth===w)return;fallbackWidth=w;const h=stableViewport?Math.max(innerHeight,screen.height):innerHeight,d=Math.min(devicePixelRatio||1,maxDpr,Math.sqrt(pixelBudget/(w*h)));replacement.style.width=w+'px';replacement.style.height=h+'px';replacement.width=w*d;replacement.height=h*d;ctx.scale(d,d);ctx.fillStyle='#000000';ctx.fillRect(0,0,w,h);let seed=1+Math.floor(scene[0]*1000000);function random(){seed=(seed*16807)%2147483647;return seed/2147483647}for(let i=0;i<10000;i++){const x=random()*w,y=random()*h,u=(x-w*.5)/Math.min(w,h),v=(y-h*.5)/Math.min(w,h),b=Math.exp(-Math.pow((v-.3*u-.18*Math.sin(u*2))/.17,2));if(random()>.025+b*.7)continue;ctx.fillStyle=`rgba(209,216,226,${.12+random()*.6})`;const r=.22+Math.pow(random(),5)*.56;ctx.fillRect(x,y,r,r)}}
   fallback();reveal(replacement);addEventListener('resize',fallback,{passive:true});return{setPaused(){},renderer:'canvas-static'};
  }
  addEventListener('scroll',()=>{scrollTarget=Math.max(0,scrollY)},{passive:true});
- setup();size();request();
+ if(!gl)return fallbackRenderer();
+ try{setup()}catch(error){return fallbackRenderer()}
+ size();request();
  addEventListener('resize',()=>{size();request()},{passive:true});
  document.addEventListener('visibilitychange',()=>{last=null;if(document.hidden){cancelAnimationFrame(frame);frame=0}else request()});
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;cancelAnimationFrame(frame);frame=0});
