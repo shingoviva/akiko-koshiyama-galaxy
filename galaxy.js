@@ -114,9 +114,9 @@ window.createGalaxy=function(canvas,initiallyPaused){
  void main(){
   vec2 p=(gl_FragCoord.xy-.5*resolution)/min(resolution.x,resolution.y);
   float t=clock;
-  vec2 farP=p-vec2(0.,camera*.24);
-  vec2 midP=p-vec2(0.,camera*.65);
-  vec2 nearP=p-vec2(0.,camera*1.12);
+  vec2 farP=p-vec2(0.,camera*.08);
+  vec2 midP=p-vec2(0.,camera*.42);
+  vec2 nearP=p-vec2(0.,camera*.90);
   vec2 q=flow(midP,t*10.14);
   float ribbon=band(q,1.35);
   vec2 cloud=q*2.5+vec2(t*.00019,-t*.00014);
@@ -168,7 +168,7 @@ window.createGalaxy=function(canvas,initiallyPaused){
   // Their positions are calculated once per frame on the CPU, not per fragment.
   for(int i=0;i<5;i++){
    vec4 star=wanderers[i];
-   vec2 delta=(p-star.xy+vec2(0.,camera*.45))*cssShort;
+   vec2 delta=(p-star.xy+vec2(0.,camera*.32))*cssShort;
    if(max(abs(delta.x),abs(delta.y))<2.){
     float aa=cssShort/min(resolution.x,resolution.y);
     float point=1.-smoothstep(max(0.,star.z-aa*.55),star.z+aa*.55,length(delta));
